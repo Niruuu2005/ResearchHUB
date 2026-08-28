@@ -29,3 +29,14 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Terraform Infrastructure
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+
+# Ansible Inventory
+ansible/inventory.ini
+

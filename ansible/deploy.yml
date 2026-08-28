@@ -1,0 +1,103 @@
+---
+- name: Deploy ResearchLite Microservice on AWS EC2
+  hosts: research_server
+  become: true
+  vars:
+    repo_url: "https://github.com/Niruuu2005/ResearchHUB.git"
+    repo_branch: "main"
+    app_dir: "/opt/researchhub"
+    container_name: "researchlite"
+    image_name: "researchlite:latest"
+    host_port: 80
+    container_port: 8000
+
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system dependencies and Git
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Ensure Docker service is running and enabled
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Create application deployment directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Clone or pull latest code from GitHub
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_branch }}"
+        force: yes
+      become_user: ubuntu
+
+    - name: Build Docker image for ResearchLite
+      command: docker build -t {{ image_name }} .
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Check if previous container exists
+      command: docker ps -a -q -f name=^/{{ container_name }}$
+      register: existing_container
+      changed_when: false
+
+    - name: Stop and remove old container if present
+      command: docker rm -f {{ container_name }}
+      when: existing_container.stdout != ""
+
+    - name: Run new ResearchLite Docker container
+      command: >
+        docker run -d
+        --name {{ container_name }}
+        --restart unless-stopped
+        -p {{ host_port }}:{{ container_port }}
+        {{ image_name }}
+
+    - name: Pause 5 seconds for application startup
+      pause:
+        seconds: 5
+
+    - name: Verify application health endpoint
+      uri:
+        url: "http://127.0.0.1:{{ host_port }}/health"
+        method: GET
+        status_code: 200
+        return_content: yes
+      register: health_response
+      retries: 5
+      delay: 3
+      until: health_response.status == 200
+
+    - name: Display deployment success message
+      debug:
+        msg: "ResearchLite successfully deployed and operational! Healthcheck: {{ health_response.json }}"

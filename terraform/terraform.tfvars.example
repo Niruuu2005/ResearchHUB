@@ -1,0 +1,17 @@
+# ==============================================================================
+# ResearchLite Terraform Variable Definitions (Example Template)
+# Copy this file to 'terraform.tfvars' and fill in your values.
+# DO NOT commit 'terraform.tfvars' to Git.
+# ==============================================================================
+
+# AWS Region (e.g. ap-south-1 for Mumbai, us-east-1 for N. Virginia)
+aws_region = "ap-south-1"
+
+# EC2 Instance Type (Free Tier eligible)
+instance_type = "t2.micro"
+
+# Name of your EC2 Key Pair created in AWS Console (WITHOUT the .pem extension)
+key_name = "your-aws-key-pair-name"
+
+# Allowed SSH CIDR block (Use your public IP for better security or "0.0.0.0/0")
+allowed_ssh_cidr = "0.0.0.0/0"
