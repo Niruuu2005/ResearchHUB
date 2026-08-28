@@ -8,7 +8,7 @@
 aws_region = "ap-south-1"
 
 # EC2 Instance Type (Free Tier eligible)
-instance_type = "t2.micro"
+instance_type = "t3.micro"
 
 # Name of your EC2 Key Pair created in AWS Console (WITHOUT the .pem extension)
 key_name = "your-aws-key-pair-name"

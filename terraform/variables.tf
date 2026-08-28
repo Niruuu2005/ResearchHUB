@@ -12,8 +12,8 @@ variable "project_name" {
 
 variable "instance_type" {
   type        = string
-  description = "EC2 instance size (Free Tier eligible: t2.micro or t3.micro)"
-  default     = "t2.micro"
+  description = "EC2 instance size (Free Tier eligible: t3.micro or t2.micro)"
+  default     = "t3.micro"
 }
 
 variable "key_name" {
