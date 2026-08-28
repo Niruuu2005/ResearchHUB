@@ -53,12 +53,21 @@
         group: ubuntu
         mode: '0755'
 
-    - name: Clone or pull latest code from GitHub
-      git:
-        repo: "{{ repo_url }}"
-        dest: "{{ app_dir }}"
-        version: "{{ repo_branch }}"
-        force: yes
+    - name: Check if application repository already exists
+      stat:
+        path: "{{ app_dir }}/.git"
+      register: repo_git_dir
+
+    - name: Clone repository from GitHub
+      command: git clone -b {{ repo_branch }} {{ repo_url }} {{ app_dir }}
+      when: not repo_git_dir.stat.exists
+      become_user: ubuntu
+
+    - name: Pull latest code from GitHub
+      command: git pull origin {{ repo_branch }}
+      args:
+        chdir: "{{ app_dir }}"
+      when: repo_git_dir.stat.exists
       become_user: ubuntu
 
     - name: Build Docker image for ResearchLite
