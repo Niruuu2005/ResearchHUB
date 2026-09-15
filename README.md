@@ -1,30 +1,53 @@
-# ResearchLite — Automated Topic Research Microservice
+# ResearchOps AI — Intelligent Literature Research & DevOps Platform
 
-> **Academic DevOps & Microservice Project**  
-> An automated, resilient topic-research microservice built with **Python 3.12**, **FastAPI**, **Wikipedia REST API**, **OpenAlex Works API**, **Crossref API**, and **Docker**.
-
----
-
-## 1. Project Overview
-
-**ResearchLite** is a lightweight research microservice designed to accept an arbitrary research topic (e.g., *Quantum Computing*, *DevOps*, *Large Language Models*) and synthesize:
-- **Topic Summary**: Introductory background extract fetched from Wikipedia.
-- **Key Takeaways**: Deterministically extracted key concept points.
-- **Academic Publications**: Scholarly research papers, publication years, authors, and DOI links retrieved and deduplicated from OpenAlex and Crossref.
-- **Source Citations**: Canonical web and DOI reference links.
-- **Resilience Warnings**: Non-blocking warning messages if an upstream academic provider experiences a timeout or outage.
+> **Academic DevOps + AI Literature Research Platform**  
+> A cloud-ready, observable research platform built with **Python 3.12+**, **FastAPI**, **PostgreSQL** (pgvector image for future SQL vectors), **Redis**, **Celery**, **Docker Compose**, **Prometheus**, **Grafana**, and RAG-powered document intelligence.
 
 ---
 
-## 2. Problem Statement & Motivation
+## 1. Executive Summary
 
-Conducting preliminary literature reviews and domain research typically requires querying multiple distinct sources manually: encyclopedic overviews for general context and academic indices for peer-reviewed papers. 
+**ResearchOps AI** is the expanded evolution of the original *ResearchLite* microservice. It transforms an ephemeral query tool into a comprehensive, production-grade **research intelligence workspace and DevOps lifecycle platform**.
 
-**ResearchLite** solves this by acting as a single, consolidated research microservice that:
-1. Concurrently queries open-access knowledge providers.
-2. Deduplicates scholarly citations across multiple databases.
-3. Provides fault tolerance: if one academic source is down or slow, the service still delivers partial results gracefully instead of failing with an HTTP 500 error.
-4. Exposes both an interactive REST API (OpenAPI/Swagger) and a modern single-page browser frontend.
+The system automates the complete scholarly research lifecycle:
+
+```text
+Research Topic
+      ↓
+Discover Papers (OpenAlex, Crossref, Wikipedia)
+      ↓
+Save to Project Workspace
+      ↓
+Download / Upload PDFs
+      ↓
+Extract, Chunk, and Create Dense Vector Embeddings
+      ↓
+Chat with Individual Papers & Entire Library (RAG)
+      ↓
+Compare Research Papers (Side-by-Side Matrix)
+      ↓
+Generate 11-Section Literature Review
+      ↓
+Export Referenced Reports (PDF, DOCX, Markdown, BibTeX)
+      ↓
+Monitor Services, Background Queues & Metrics in ResearchOps Control Center
+```
+
+---
+
+## 2. Core Feature Modules
+
+1. **Scholarly Literature Discovery**: Concurrent querying across OpenAlex, Crossref, and Wikipedia with date filtering, open-access status checks, DOI/title deduplication, and key-point extraction.
+2. **Project Workspaces**: Create, organize, and archive dedicated research projects grouping papers, notes, chats, and reviews.
+3. **Personal Paper Library**: Persistent collection of saved papers with status tracking, tags, and citation generators.
+4. **Document Ingestion & Validation**: Secure PDF uploads and open-access downloads with SHA-256 checksumming, MIME verification, and text extraction via PyMuPDF (`fitz`) and `pypdf`.
+5. **RAG Semantic Chat**: Query single papers or entire project collections with grounded answers backed by precise page numbers and section citations.
+6. **16-Parameter Structured Summaries**: Automated empirical summaries covering research problems, methodologies, datasets, algorithms, findings, limitations, and future directions.
+7. **Paper Comparison Matrix**: Side-by-side comparative analysis of 2 to 5 papers highlighting trade-offs, methodological trends, and open research gaps.
+8. **Literature Review Builder**: 11-section reviews grounded in saved paper abstracts/metadata (extractive synthesis, not invented prose).
+9. **Citation Manager**: Instant formatting and export in IEEE, APA, MLA, Harvard, and BibTeX styles.
+10. **Multi-Format Report Exports**: Downloadable PDF (ReportLab), Word DOCX (python-docx), Markdown, JSON, and BibTeX artifacts.
+11. **ResearchOps Control Center**: Service health, Celery job queues (when `USE_CELERY=true`), Prometheus gauges from live DB counts, and build metadata.
 
 ---
 
@@ -32,266 +55,128 @@ Conducting preliminary literature reviews and domain research typically requires
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Language** | Python 3.12+ | Core programming runtime |
-| **API Framework** | FastAPI | High-performance asynchronous REST API framework |
-| **ASGI Web Server** | Uvicorn | High-throughput asynchronous server |
-| **HTTP Client** | HTTPX | Asynchronous, non-blocking HTTP client for external APIs |
-| **Data Validation** | Pydantic v2 | Strict schema validation, type checking, and serialization |
-| **Research Sources** | Wikipedia + OpenAlex + Crossref | Public open-access knowledge and bibliographic APIs |
-| **Containerization** | Docker | Portable, containerized runtime environment |
-| **Testing** | Pytest + TestClient | Automated unit and integration testing suite |
-| **Frontend** | HTML5 / CSS3 / Vanilla JS | Responsive, glassmorphic single-page research interface |
+| **Backend Runtime** | Python 3.12+ / FastAPI / Uvicorn | High-throughput asynchronous REST API |
+| **Relational Database** | PostgreSQL 16 (pgvector image) / SQLite | Relational state; embeddings stored as JSON with Python cosine search |
+| **Distributed Queue** | Redis 7 + Celery | Async PDF/export jobs when `USE_CELERY=true` (sync fallback otherwise) |
+| **Document Processing** | PyMuPDF (`fitz`) / pypdf | PDF text extraction and sliding-window chunking |
+| **Embeddings & Vector** | sentence-transformers or hash | 384-dim vectors; ST when installed, lexical hash fallback |
+| **AI Reasoning** | OpenAI / Gemini / Ollama / offline extract | Configurable LLM; offline mode quotes retrieved chunks only |
+| **Observability** | Prometheus + Grafana | Live metrics scraping, latency monitoring, and healthchecks |
+| **Containerization** | Docker & Docker Compose | Multi-container reproducible runtime |
+| **CI/CD** | GitHub Actions | Automated linting, pytest with coverage, and container builds |
+| **User Interface** | Modern Single Page App (SPA) | Glassmorphic dark aesthetic, responsive sidebar, Chart.js analytics |
 
 ---
 
-## 4. Architecture & Data Flow
+## 4. Quickstart Guide
 
-```mermaid
-flowchart TD
-    User([User / Browser]) -->|POST /research| API[FastAPI Application]
-    API --> Service[Research Orchestration Service]
-    
-    subgraph Parallel Async Providers
-        Service -->|async get| W[Wikipedia REST API]
-        Service -->|async get| O[OpenAlex Works API]
-        Service -->|async get| C[Crossref Bibliographic API]
-    end
-    
-    W -->|Summary Extract| Agg[Aggregation & Normalizer]
-    O -->|Publications Metadata| Agg
-    C -->|Bibliographic Records| Agg
-    
-    Agg -->|Deduplicate DOIs & Titles| Dedup[Deduplication Engine]
-    Dedup -->|Extract Key Concepts| KeyPoints[Key-Point Synthesizer]
-    KeyPoints -->|Return Structured JSON| Response[ResearchResponse Model]
-    Response --> User
+Full instructions (local, Docker Compose, Terraform → EC2 → Ansible): **[docs/deployment.md](docs/deployment.md)**  
+Command cheat sheet: **[docs/deployment-commands.md](docs/deployment-commands.md)**
+
+### Option A: Local Development (Zero-Setup Mode)
+The platform includes automatic fallback for local development without requiring external daemons:
+
+```powershell
+# 1. Activate virtual environment
+.venv\Scripts\Activate.ps1
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Start server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Open your browser:
+- **Application Dashboard**: `http://localhost:8000`
+- **Interactive Swagger Docs**: `http://localhost:8000/docs`
+- **Prometheus Metrics**: `http://localhost:8000/metrics`
+- **Health Check**: `http://localhost:8000/health`
+- **Readiness Probe**: `http://localhost:8000/ready`
+
 ---
 
-## 5. Repository Structure
+### Option B: Docker Compose Multi-Service Cluster
+
+**Start Docker Desktop first.** Free port 8000 (stop local uvicorn) if needed.
+
+```powershell
+docker compose up --build -d
+docker compose ps
+curl.exe http://localhost:8000/health
+```
+
+Migrations run automatically on API startup.
+
+Service URLs:
+- **API / Web UI**: `http://localhost:8000`
+- **Nginx Gateway**: `http://localhost:8080`
+- **Prometheus**: `http://localhost:9090`
+- **Grafana**: `http://localhost:3001` (admin / admin)
+
+---
+
+### Option C: AWS EC2 (Terraform + Ansible + Docker)
+
+```text
+GitHub → Terraform (EC2 + SG) → Ansible (Docker Compose on /opt/researchhub) → http://<public-ip>
+```
+
+See **[docs/deployment.md](docs/deployment.md)** Part 3 for the full walkthrough.
+
+---
+
+## 5. Automated Testing
+
+Execute the comprehensive automated test suite:
+
+```powershell
+pytest -v
+```
+
+Expect all tests to pass (currently ~33). See `tests/` for coverage of health, library, RAG, exports, operations, and more.
+
+---
+
+## 6. Repository Layout
 
 ```text
 ResearchHub/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                  # FastAPI app entry point, CORS, static mounting
-│   ├── config.py                # Configuration and timeout settings
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── routes.py            # Endpoints: /health, /research, /papers
+│   ├── main.py                  # Lifespan startup, router mounting, static serving
+│   ├── config.py                # Centralized environment configuration
+│   ├── api/                     # Modular REST API endpoints
+│   │   ├── health.py            # /health, /ready, /metrics, /api/system/version
+│   │   ├── research.py          # /api/research, history tracking
+│   │   ├── projects.py          # /api/projects workspaces CRUD
+│   │   ├── papers.py            # /api/papers catalogue
+│   │   ├── documents.py         # PDF upload, fetch, and stream
+│   │   ├── chat.py              # Grounded RAG chat (paper, project, library)
+│   │   ├── summaries.py         # 16-field paper & collection summaries
+│   │   ├── compare.py           # Multi-paper comparative matrix
+│   │   ├── literature_review.py # 11-section literature review generator
+│   │   ├── notes.py             # Research notes & highlights
+│   │   ├── citations.py         # IEEE, APA, MLA, Harvard, BibTeX
+│   │   ├── exports.py           # Report file generation & downloads
+│   │   ├── operations.py        # DevOps Control Center, jobs, health
+│   │   └── routes.py            # Legacy backwards compatibility forwarders
+│   ├── db/
+│   │   └── session.py           # SQLAlchemy session, engine, init_db
 │   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py           # Pydantic schemas (ResearchRequest, Paper, etc.)
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── wikipedia_service.py # Wikipedia async adapter & search fallback
-│   │   ├── openalex_service.py  # OpenAlex academic works query adapter
-│   │   ├── crossref_service.py  # Crossref bibliographic records adapter
-│   │   └── research_service.py  # Orchestration, deduplication, key-point extraction
+│   │   ├── database.py          # SQLAlchemy ORM models
+│   │   └── schemas.py           # Pydantic v2 validation models
+│   ├── services/                # Business logic, RAG, providers, LLM, exports
+│   ├── workers/                 # Celery app & async task handlers
+│   ├── utils/                   # Text chunking, hashing, citations, files
 │   └── static/
-│       └── index.html           # Single-page frontend user interface
-├── tests/
-│   ├── __init__.py
-│   ├── test_health.py           # Health endpoint and static serving tests
-│   ├── test_research.py         # Route integration and validation tests
-│   └── test_providers.py        # Provider unit tests with mocked network calls
-├── docs/
-│   ├── development-plan.md      # Milestone and architecture planning
-│   ├── architecture.md          # Detailed architecture specification & diagrams
-│   ├── troubleshooting.md       # Local running and diagnostic guide
-│   ├── viva.md                  # Comprehensive viva questions & answers
-│   └── development-log.md       # Chronological development milestone records
-├── Dockerfile                   # Python 3.12 slim container with healthcheck
-├── .dockerignore                # Build context exclusion rules
-├── requirements.txt             # Project dependencies
-├── .env.example                 # Environment configuration template
-├── .gitignore                   # Version control ignore rules
-├── pytest.ini                   # Pytest async configuration
-├── project.md                   # Formal academic project documentation
-└── CHANGELOG.md                 # Semantic version changelog
+│       └── index.html           # Modern SPA interface (20 views, Chart.js)
+├── monitoring/
+│   └── prometheus.yml           # Prometheus scrape configuration
+├── tests/                       # 23 automated unit & integration test suites
+├── docs/                        # Architecture, API, deployment, and viva docs
+├── Dockerfile                   # Production API container image
+├── Dockerfile.worker            # Production Celery worker container image
+├── docker-compose.yml           # Multi-service container topology
+├── requirements.txt             # Python project dependencies
+└── README.md                    # Project documentation
 ```
-
----
-
-## 6. Local Setup & Execution
-
-### Prerequisites
-- Python 3.12 or newer installed (`python --version`)
-- Git
-
-### Step-by-Step Instructions
-
-1. **Clone or navigate to the repository directory:**
-   ```bash
-   cd ResearchHub
-   ```
-
-2. **Create and activate a virtual environment:**
-   - **Linux / macOS:**
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     ```
-   - **Windows (PowerShell):**
-     ```powershell
-     python -m venv .venv
-     .venv\Scripts\Activate.ps1
-     ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the FastAPI application:**
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-5. **Access the Application:**
-   - **Web Interface**: [http://localhost:8000](http://localhost:8000)
-   - **Swagger Interactive API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-   - **ReDoc API Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-   - **Health Check Endpoint**: [http://localhost:8000/health](http://localhost:8000/health)
-
----
-
-## 7. Docker Containerization
-
-To run ResearchLite inside an isolated, production-like Docker container:
-
-1. **Build the Docker Image:**
-   ```bash
-   docker build -t researchlite:1.0.0 .
-   ```
-
-2. **Run the Container:**
-   ```bash
-   docker run -d --name researchlite-app -p 8000:8000 researchlite:1.0.0
-   ```
-
-3. **Verify Container Status:**
-   ```bash
-   docker ps
-   curl http://localhost:8000/health
-   ```
-
-4. **Stop and Clean Up:**
-   ```bash
-   docker stop researchlite-app
-   docker rm researchlite-app
-   ```
-
----
-
-## 8. API Reference
-
-### 8.1 Health Check
-- **Endpoint**: `GET /health`
-- **Description**: Verifies service status and build version.
-- **Sample Response**:
-  ```json
-  {
-    "status": "running",
-    "service": "ResearchLite",
-    "version": "1.0.0"
-  }
-  ```
-
----
-
-### 8.2 Perform Topic Research
-- **Endpoint**: `POST /research`
-- **Header**: `Content-Type: application/json`
-- **Request Body**:
-  ```json
-  {
-    "topic": "Quantum Computing"
-  }
-  ```
-- **Sample Response**:
-  ```json
-  {
-    "topic": "Quantum Computing",
-    "summary": "Quantum computing is a rapidly-emerging technology that harnesses the laws of quantum mechanics to solve problems too complex for classical computers.",
-    "key_points": [
-      "Quantum computing is a rapidly-emerging technology that harnesses the laws of quantum mechanics.",
-      "Solves problems too complex for classical computers."
-    ],
-    "papers": [
-      {
-        "title": "Quantum supremacy using a programmable superconducting processor",
-        "authors": ["Frank Arute", "John M. Martinis"],
-        "year": 2019,
-        "source": "OpenAlex",
-        "url": "https://doi.org/10.1038/s41586-019-1666-5",
-        "doi": "10.1038/s41586-019-1666-5"
-      }
-    ],
-    "sources": [
-      {
-        "name": "Wikipedia",
-        "title": "Quantum computing",
-        "url": "https://en.wikipedia.org/wiki/Quantum_computing"
-      },
-      {
-        "name": "OpenAlex",
-        "title": "OpenAlex Works Index (5 publications)",
-        "url": "https://openalex.org/works?search=Quantum+Computing"
-      }
-    ],
-    "warnings": []
-  }
-  ```
-
----
-
-### 8.3 Paper Search
-- **Endpoint**: `GET /papers?topic=DevOps`
-- **Description**: Retrieves deduplicated scholarly publications for a topic from OpenAlex and Crossref.
-- **Sample Response**:
-  ```json
-  [
-    {
-      "title": "Continuous Delivery and DevOps: A Systematic Literature Review",
-      "authors": ["Lianping Chen"],
-      "year": 2018,
-      "source": "OpenAlex",
-      "url": "https://doi.org/10.1109/computer.2018.2888278",
-      "doi": "10.1109/computer.2018.2888278"
-    }
-  ]
-  ```
-
----
-
-## 9. Automated Testing
-
-The project includes an automated test suite with **12 tests** covering health endpoints, route validation, input sanitization, provider parsing, deduplication, and partial failure resilience.
-
-Run tests using pytest:
-```bash
-python -m pytest tests/ -v
-```
-
----
-
-## 10. Fault Tolerance & Provider Resilience
-
-The microservice employs asynchronous concurrency with `asyncio.gather(..., return_exceptions=True)`.
-
-If one upstream provider fails (e.g. Crossref times out or Wikipedia is unreachable):
-1. The error is captured as an exception object instead of bubbling up.
-2. The remaining functional providers are aggregated into the response.
-3. A clear warning message is appended to the `warnings` array.
-4. The client receives an HTTP 200 with partial results rather than an HTTP 500 failure.
-
----
-
-## 11. Viva Quick Reference
-
-- **Why FastAPI?** Native asynchronous I/O (`async`/`await`), automated OpenAPI documentation generation, and high execution speed with Pydantic serialization.
-- **Why HTTPX over Requests?** HTTPX supports non-blocking asynchronous requests (`AsyncClient`), enabling concurrent queries to Wikipedia, OpenAlex, and Crossref.
-- **What is Deduplication in ResearchLite?** Eliminates duplicate citations appearing in both OpenAlex and Crossref using normalized DOIs and alphanumeric title hashing.
-- **How is Container Isolation Achieved?** A lightweight Docker image (`python:3.12-slim`) packaged with explicit dependencies, running as a non-privileged `appuser`.

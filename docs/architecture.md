@@ -1,154 +1,99 @@
-# ResearchLite — System Architecture & Specification
+# ResearchOps AI — System Architecture & Specification
+
+> **Intelligent Literature Research, Paper Analysis & DevOps Platform**  
+> Scalable, observable architecture with FastAPI, PostgreSQL (pgvector-ready image), Redis, Celery, Docker, Prometheus, and RAG-based document intelligence.
 
 ---
 
-## 1. High-Level Architecture
-
-ResearchLite is structured as a decoupled, asynchronous microservice that mediates between end-user clients and external knowledge registries.
+## 1. High-Level Multi-Service Architecture
 
 ```mermaid
 flowchart TD
-    Client["Client (Browser UI / REST Client)"]
+    Browser["Client Browser (Single Page Application)"]
     
-    subgraph FastAPI Runtime
-        Router["API Router (/health, /research, /papers)"]
-        Service["Research Orchestration Service"]
-        
-        subgraph Adapters
-            Wiki["Wikipedia Adapter"]
-            OpenAlex["OpenAlex Adapter"]
-            Crossref["Crossref Adapter"]
-        end
-        
-        subgraph Pipeline Engines
-            Dedup["Deduplication Engine"]
-            Extractor["Key-Point Extractor"]
-        end
+    subgraph Gateway & Ingress
+        Nginx["Reverse Proxy / Nginx"]
     end
-    
-    subgraph External Public APIs
-        ExtWiki[("Wikipedia REST API")]
-        ExtAlex[("OpenAlex Works API")]
-        ExtCross[("Crossref Works API")]
+
+    subgraph Application Tier
+        API["FastAPI REST API (/api/*, /metrics, /health, /ready)"]
+        Worker["Celery Background Worker"]
     end
-    
-    Client -->|HTTP Request| Router
-    Router --> Service
-    
-    Service -.->|async query| Wiki
-    Service -.->|async query| OpenAlex
-    Service -.->|async query| Crossref
-    
-    Wiki --> ExtWiki
-    OpenAlex --> ExtAlex
-    Crossref --> ExtCross
-    
-    ExtWiki -.->|summary extract| Wiki
-    ExtAlex -.->|works metadata| OpenAlex
-    ExtCross -.->|bibliographic items| Crossref
-    
-    Wiki --> Service
-    OpenAlex --> Dedup
-    Crossref --> Dedup
-    
-    Dedup -->|unique papers| Service
-    Service --> Extractor
-    Extractor -->|synthesized payload| Router
-    Router -->|JSON Response| Client
+
+    subgraph Persistence & Caching
+        PG[("PostgreSQL 16 (pgvector image)")]
+        Redis[("Redis Cache & Broker")]
+        DocStore[("Document Storage / Volume")]
+    end
+
+    subgraph Observability
+        Prometheus["Prometheus Server (:9090)"]
+        Grafana["Grafana Dashboard (:3001)"]
+    end
+
+    subgraph External Research Providers
+        OpenAlex[("OpenAlex Works API")]
+        Crossref[("Crossref Works API")]
+        Wiki[("Wikipedia REST API")]
+    end
+
+    Browser -->|HTTPS / REST| Nginx
+    Nginx --> API
+    API -->|Read / Write| PG
+    API -->|Queue Jobs / Cache| Redis
+    API -->|Store PDFs & Reports| DocStore
+
+    Worker -->|Consume Tasks| Redis
+    Worker -->|Vector Indexing / Chunks| PG
+    Worker -->|Extract Text| DocStore
+
+    API -->|Async HTTP Queries| OpenAlex
+    API -->|Async HTTP Queries| Crossref
+    API -->|Async HTTP Queries| Wiki
+
+    Prometheus -->|Scrape /metrics| API
+    Grafana -->|Query Metrics| Prometheus
 ```
 
 ---
 
-## 2. Asynchronous Execution & Sequence Diagram
-
-The following sequence diagram illustrates the lifecycle of a `POST /research` request:
+## 2. RAG Document Intelligence Pipeline
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor User as User / Browser
-    participant API as FastAPI Router
-    participant Service as ResearchService
-    participant Wiki as WikipediaService
-    participant Alex as OpenAlexService
-    participant Cross as CrossrefService
+flowchart LR
+    PDF["Research Paper PDF"] --> TextExt["PyMuPDF / pypdf Text Extraction"]
+    TextExt --> Chunking["Sliding Window Chunker (Section & Page Tagged)"]
+    Chunking --> Embedding["Dense Vector Embedding (384-dim)"]
+    Embedding --> VectorStore[("Chunk Embeddings (JSON + Python Cosine)")]
 
-    User->>API: POST /research {"topic": "Quantum Computing"}
-    API->>API: Validate input (Pydantic)
-    API->>Service: perform_research("Quantum Computing")
-    
-    par Async Wikipedia Call
-        Service->>Wiki: fetch_summary("Quantum Computing")
-        Wiki->>Wiki: GET https://en.wikipedia.org/api/rest_v1/...
-        Wiki-->>Service: (title, extract, url)
-    and Async OpenAlex Call
-        Service->>Alex: search_papers("Quantum Computing")
-        Alex->>Alex: GET https://api.openalex.org/works?search=...
-        Alex-->>Service: [Paper, Paper, ...]
-    and Async Crossref Call
-        Service->>Cross: search_papers("Quantum Computing")
-        Cross->>Cross: GET https://api.crossref.org/works?query=...
-        Cross-->>Service: [Paper, Paper, ...]
-    end
-
-    Service->>Service: Deduplicate papers by DOI & Title
-    Service->>Service: Extract key points from summary
-    Service->>Service: Assemble ResearchResponse + warnings
-    Service-->>API: ResearchResponse
-    API-->>User: HTTP 200 JSON Response
+    Query["User Question"] --> QueryEmbed["Query Vector Embedding"]
+    QueryEmbed --> CosineSim["Cosine Similarity Search"]
+    VectorStore --> CosineSim
+    CosineSim --> TopK["Top-K Relevant Chunks"]
+    TopK --> LLM["Grounded LLM / Offline Extract"]
+    LLM --> Answer["Citations-Backed Response (Page & Section Referenced)"]
 ```
 
 ---
 
-## 3. Data Model Architecture
+## 3. Data Entities & Schema Topology
 
-```mermaid
-classDiagram
-    class ResearchRequest {
-        +str topic
-        +validate_and_strip_topic()
-    }
-
-    class Paper {
-        +str title
-        +List[str] authors
-        +int year
-        +str source
-        +str url
-        +str doi
-    }
-
-    class Source {
-        +str name
-        +str title
-        +str url
-    }
-
-    class ResearchResponse {
-        +str topic
-        +str summary
-        +List[str] key_points
-        +List[Paper] papers
-        +List[Source] sources
-        +List[str] warnings
-    }
-
-    class HealthResponse {
-        +str status
-        +str service
-        +str version
-    }
-
-    ResearchResponse *-- Paper
-    ResearchResponse *-- Source
-```
+- **ResearchProject**: Workspaces grouping papers, notes, chats, comparisons, and literature reviews.
+- **Paper**: Canonical bibliographic records with DOI and title normalization deduplication.
+- **PaperDocument**: Ingested PDFs with checksum validation, file metadata, and extraction lifecycle states (`pending`, `processing`, `ready`, `failed`).
+- **PaperChunk**: Overlapping text passages tagged with page numbers and detected academic section headings.
+- **PaperSummary**: Standardized 16-parameter empirical research summary.
+- **ChatSession & ChatMessage**: Multi-turn dialogue with JSON-serialized source citation pills.
+- **ExportReport**: Multi-format generated artifacts (PDF, DOCX, Markdown, JSON, BibTeX).
+- **BackgroundJob**: Distributed Celery task tracker for long-running extractions.
+- **DeploymentRecord & AuditEvent**: DevOps release tracking and operational audit trail.
 
 ---
 
-## 4. Resilience & Error Handling Architecture
+## 4. Observability & DevOps Resilience
 
-The service adheres to the **Bulkhead and Fallback Pattern**:
-
-1. **Isolation**: A slow or non-responsive provider does not exhaust thread pools because all operations run asynchronously on non-blocking event loops.
-2. **Timeouts**: Every HTTP call is bounded by a client-level timeout (default: 10s).
-3. **Graceful Fallback**: If an external provider returns an error, the exception is caught, added as a warning entry, and the response is served with the available data.
+1. **Liveness Probe (`GET /health`)**: Checks process responsiveness.
+2. **Readiness Probe (`GET /ready`)**: Asserts database and worker queue operational state.
+3. **Prometheus Exporter (`GET /metrics`)**: Exposes DB-backed gauges (papers, documents, chunks, projects, active jobs) and measured provider probe latencies.
+4. **Graceful Provider Degradation**: Isolated timeouts prevent single academic provider failures from halting user research queries.
+5. **Build Metadata**: Control Center surfaces version/commit/build info (no simulated container rollback).

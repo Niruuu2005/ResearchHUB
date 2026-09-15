@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from app.models.schemas import Paper
-from app.services.crossref_service import CrossrefService
+from app.services.crossref_service import CrossrefService, clean_crossref_abstract
 from app.services.openalex_service import OpenAlexService
 from app.services.research_service import ResearchService
 from app.services.wikipedia_service import WikipediaService
@@ -53,7 +53,17 @@ async def test_openalex_service_mocked():
                 "publication_year": 2016,
                 "doi": "https://doi.org/10.1109/cvpr.2016.90",
                 "primary_location": {
-                    "landing_page_url": "https://doi.org/10.1109/cvpr.2016.90"
+                    "landing_page_url": "https://doi.org/10.1109/cvpr.2016.90",
+                    "source": {"display_name": "CVPR"},
+                },
+                "open_access": {"is_oa": True, "oa_url": "https://example.com/paper.pdf"},
+                "abstract_inverted_index": {
+                    "We": [0],
+                    "present": [1],
+                    "a": [2],
+                    "residual": [3],
+                    "learning": [4],
+                    "framework.": [5],
                 },
             }
         ]
@@ -72,6 +82,9 @@ async def test_openalex_service_mocked():
         assert papers[0].authors == ["Kaiming He", "Xiangyu Zhang"]
         assert papers[0].year == 2016
         assert papers[0].source == "OpenAlex"
+        assert papers[0].abstract == "We present a residual learning framework."
+        assert papers[0].open_access is True
+        assert papers[0].pdf_url == "https://example.com/paper.pdf"
 
 
 @pytest.mark.asyncio
@@ -111,6 +124,38 @@ async def test_crossref_service_mocked():
         assert papers[0].authors == ["Ashish Vaswani", "Noam Shazeer"]
         assert papers[0].year == 2017
         assert papers[0].source == "Crossref"
+
+
+def test_clean_crossref_abstract_strips_jats():
+    raw = (
+        "<jats:p>&lt;p&gt;&lt;span&gt;This whitepaper introduces the F7-LAS model.&lt;/span&gt;&lt;/p&gt;</jats:p>"
+    )
+    assert clean_crossref_abstract(raw) == "This whitepaper introduces the F7-LAS model."
+
+
+@pytest.mark.asyncio
+async def test_crossref_fetch_by_doi_mocked():
+    service = CrossrefService()
+    mock_data = {
+        "message": {
+            "title": ["Securing Agentic AI"],
+            "DOI": "10.2139/ssrn.5848743",
+            "URL": "https://doi.org/10.2139/ssrn.5848743",
+            "issued": {"date-parts": [[2026]]},
+            "abstract": "<jats:p>Practical layered model for securing agentic AI.</jats:p>",
+            "author": [{"given": "A", "family": "Fuller"}],
+        }
+    }
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_get.return_value = httpx.Response(
+            status_code=200,
+            json=mock_data,
+            request=httpx.Request("GET", "https://api.crossref.org/works/10.2139/ssrn.5848743"),
+        )
+        paper = await service.fetch_by_doi("10.2139/ssrn.5848743")
+        assert paper is not None
+        assert paper.title == "Securing Agentic AI"
+        assert paper.abstract == "Practical layered model for securing agentic AI."
 
 
 @pytest.mark.asyncio

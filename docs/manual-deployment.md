@@ -1,6 +1,12 @@
 # ResearchLite — Manual DevOps Deployment Guide
 
-> **Academic FA Demonstration Guide**  
+> **Superseded for ResearchOps AI.** Use the up-to-date guide: **[deployment.md](deployment.md)**  
+> (local run → Docker Compose → Terraform EC2 → Ansible → cleanup).  
+> Command cheat sheet: **[deployment-commands.md](deployment-commands.md)**.
+
+---
+
+> **Academic FA Demonstration Guide (legacy ResearchLite notes below)**  
 > Complete step-by-step walkthrough of the entire DevOps lifecycle:  
 > **GitHub → Terraform → AWS EC2 → Ansible → Docker → Research Microservice**
 

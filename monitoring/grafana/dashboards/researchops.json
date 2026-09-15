@@ -1,0 +1,120 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Papers in Library",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_total_papers",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "title": "Indexed Documents",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_total_documents",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "title": "Vector Chunks",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_total_chunks",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "title": "Active Background Jobs",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_active_background_jobs",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 5,
+      "title": "Research Projects",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "researchops_total_projects",
+          "refId": "A",
+          "legendFormat": "projects"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 6,
+      "title": "Provider Probe Latency (ms)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "researchops_provider_latency_ms",
+          "refId": "A",
+          "legendFormat": "{{provider}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["researchops"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "ResearchOps Overview",
+  "uid": "researchops-overview",
+  "version": 2
+}

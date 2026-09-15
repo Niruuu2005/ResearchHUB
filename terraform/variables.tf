@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   type        = string
   description = "Name identifier for the project resources"
-  default     = "ResearchLite"
+  default     = "ResearchOpsAI"
 }
 
 variable "instance_type" {

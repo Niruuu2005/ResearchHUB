@@ -1,0 +1,160 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: researchops-api
+    restart: unless-stopped
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=ResearchOps AI
+      - APP_VERSION=2.0.0
+      - APP_ENV=production
+      - DATABASE_URL=postgresql+psycopg2://researchops:researchops_secret@postgres:5432/researchops
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_PATH=/app/data/documents
+      - EXPORT_STORAGE_PATH=/app/data/exports
+      - USE_CELERY=true
+      - EMBEDDING_PROVIDER=auto
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+    volumes:
+      - doc_data:/app/data/documents
+      - export_data:/app/data/exports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - researchops-net
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: researchops-worker
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info -c 2
+    environment:
+      - APP_NAME=ResearchOps AI
+      - APP_VERSION=2.0.0
+      - APP_ENV=production
+      - DATABASE_URL=postgresql+psycopg2://researchops:researchops_secret@postgres:5432/researchops
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_PATH=/app/data/documents
+      - EXPORT_STORAGE_PATH=/app/data/exports
+      - USE_CELERY=true
+      - EMBEDDING_PROVIDER=auto
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+    volumes:
+      - doc_data:/app/data/documents
+      - export_data:/app/data/exports
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - researchops-net
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: researchops-postgres
+    restart: unless-stopped
+    # No host port publish — avoids clash with local Postgres on 5432
+    environment:
+      - POSTGRES_USER=researchops
+      - POSTGRES_PASSWORD=researchops_secret
+      - POSTGRES_DB=researchops
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U researchops -d researchops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - researchops-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: researchops-redis
+    restart: unless-stopped
+    # No host port publish — avoids clash with local Redis on 6379
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - researchops-net
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: researchops-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom_data:/prometheus
+    networks:
+      - researchops-net
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: researchops-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - researchops-net
+
+  gateway:
+    image: nginx:alpine
+    container_name: researchops-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    networks:
+      - researchops-net
+
+volumes:
+  pg_data:
+  redis_data:
+  doc_data:
+  export_data:
+  prom_data:
+  grafana_data:
+
+networks:
+  researchops-net:
+    driver: bridge

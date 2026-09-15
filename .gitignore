@@ -7,6 +7,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+.hypothesis/
 
 # Environments
 .venv/
@@ -30,6 +31,14 @@ dist/
 build/
 *.egg-info/
 
+# Local runtime data (never commit research DB / uploads / exports)
+researchops.db
+*.db
+data/documents/
+data/exports/
+!data/documents/.gitkeep
+!data/exports/.gitkeep
+
 # Terraform Infrastructure
 .terraform/
 *.tfstate
@@ -40,3 +49,5 @@ build/
 # Ansible Inventory
 ansible/inventory.ini
 
+
+server.log

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'ResearchOps'
+    orgId: 1
+    folder: 'ResearchOps AI'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards

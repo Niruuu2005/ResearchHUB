@@ -1,81 +1,58 @@
-# ResearchLite — Academic Viva Preparation Guide
+# ResearchOps AI — Academic Viva Defense Guide
 
-This document contains high-yield questions, detailed technical answers, and conceptual summaries for faculty assessments and viva examinations.
-
----
-
-## 1. Core Architecture & Microservices
-
-### Q1: What is a Microservice Architecture, and how does ResearchLite exemplify it?
-**Answer:**  
-A microservice architecture structures an application as a collection of small, loosely-coupled, independently deployable services organized around specific business capabilities.  
-**ResearchLite** is a self-contained research microservice with a single, clear responsibility: receiving a topic and returning synthesized summaries and academic literature. It exposes well-defined REST contracts (`/health`, `/research`, `/papers`), communicates over standard HTTP/JSON, and is packaged into a standalone Docker container with its own dependencies and runtime environment.
-
-### Q2: Why did you choose FastAPI over Flask or Django?
-**Answer:**  
-1. **Native Asynchronous Support**: FastAPI is built on Starlette and ASGI, supporting native Python `async`/`await` coroutines. This allows ResearchLite to query Wikipedia, OpenAlex, and Crossref in parallel without blocking the server event loop.
-2. **Automatic Data Validation**: Powered by Pydantic v2, request inputs and response schemas are strictly typed and validated at runtime, returning descriptive error messages (HTTP 422) for invalid payloads.
-3. **Automated Interactive Documentation**: Generates OpenAPI (Swagger UI) at `/docs` and ReDoc at `/redoc` out-of-the-box without manual documentation overhead.
-4. **Performance**: Significantly higher throughput compared to traditional WSGI frameworks like Flask.
+Comprehensive technical Q&A covering Architecture, AI/NLP RAG Pipelines, Distributed Systems, and DevOps Engineering.
 
 ---
 
-## 2. Concurrency & Asynchronous Programming
+## 1. Project Overview & Elevator Pitch
 
-### Q3: How does ResearchLite execute parallel requests to external APIs?
-**Answer:**  
-ResearchLite uses `httpx.AsyncClient` alongside `asyncio.gather(..., return_exceptions=True)`. When a request is received:
-```python
-results = await asyncio.gather(
-    self.wikipedia.fetch_summary(topic),
-    self.openalex.search_papers(topic),
-    self.crossref.search_papers(topic),
-    return_exceptions=True
-)
-```
-All three network I/O operations occur concurrently on the asyncio event loop. Rather than waiting sequentially (e.g. $1s + 1s + 1s = 3s$), total execution time is roughly bounded by the slowest single request ($\approx \max(1s, 1s, 1s) = 1s$).
-
-### Q4: What does `return_exceptions=True` in `asyncio.gather` accomplish?
-**Answer:**  
-By default, if any coroutine inside `asyncio.gather` raises an exception, the entire gather call fails immediately, canceling other tasks. Setting `return_exceptions=True` catches individual exceptions and returns them as values in the results list. This enables our service to inspect whether a provider failed (e.g. timeout on Crossref), append a warning message to the client response, and still deliver successful data from Wikipedia and OpenAlex.
+**Q: What is ResearchOps AI, and what problem does it solve?**  
+> **A:** ResearchOps AI is a cloud-ready, observable research intelligence and DevOps platform. Scholarly research is traditionally fragmented across searching for papers, finding open-access PDFs, reading long documents, synthesizing literature, extracting citations, and comparing findings. ResearchOps AI automates this lifecycle through multi-provider discovery (OpenAlex, Crossref, Wikipedia), PDF ingestion, vector chunking, citation-grounded RAG chat, structured summaries, comparative matrices, and 11-section literature reviews grounded in saved abstracts. It also demonstrates DevOps practices: Docker Compose, optional Celery workers, PostgreSQL, Prometheus metrics, structured logging, and CI/CD.
 
 ---
 
-## 3. Data Processing & Deduplication
+## 2. Architecture & Design Trade-offs
 
-### Q5: How does the Deduplication Engine work?
-**Answer:**  
-Scholarly papers often appear simultaneously in OpenAlex and Crossref. ResearchLite performs deduplication in two stages:
-1. **DOI Normalization**: Checks for exact matching of normalized lowercase Digital Object Identifiers (`doi`). If already seen, the duplicate is skipped.
-2. **Title Normalization**: Strips punctuation and whitespace, converts to lowercase, and checks against a set of seen titles.
-3. **Sorting**: Orders unique publications by publication year in descending order.
+**Q: Why choose FastAPI instead of Django or Flask?**  
+> **A:** FastAPI is built natively on Python’s asynchronous ASGI framework (Starlette and Pydantic). Because scholarly research involves making parallel network calls to multiple academic repositories (Wikipedia, OpenAlex, Crossref), FastAPI's `async/await` enables non-blocking concurrent HTTP requests via HTTPX. Additionally, automatic OpenAPI documentation and Pydantic v2 data validation ensure strict typing and reliable client contracts.
 
-### Q6: How are Key Points extracted without a heavy LLM?
-**Answer:**  
-To maintain zero external API key requirements and instant response times, ResearchLite uses deterministic sentence boundary tokenization and semantic length filtering to select the most salient thematic sentences from the introductory summary, ensuring fast, deterministic, and cost-free execution.
+**Q: Why use PostgreSQL with a pgvector image instead of a separate vector database like Pinecone or Milvus?**  
+> **A:** We run the `pgvector/pgvector:pg16` image so relational state (projects, papers, notes, jobs) and embeddings live in one database engine for simpler ops. Today embeddings are stored as JSON on chunk rows and ranked with Python cosine similarity; the pgvector extension is available for a future SQL `#<=>` index without changing the datastore. This keeps filtering by `project_id` / `paper_id` straightforward while remaining portable to SQLite for local zero-setup mode.
+
+**Q: How does the system handle partial external API failures?**  
+> **A:** Academic APIs frequently experience rate limits, transient network hiccups, or timeouts. Using `asyncio.gather(*tasks, return_exceptions=True)`, our research orchestration service isolates each provider. If Crossref or OpenAlex fails, the system logs the exception, appends a warning to the response payload, and returns synthesized findings from the surviving providers rather than crashing with a 500 error.
 
 ---
 
-## 4. Containerization & Docker
+## 3. AI & Document Intelligence (RAG)
 
-### Q7: What is the difference between a Docker Image and a Docker Container?
-**Answer:**  
-- **Docker Image**: An immutable, read-only template with instructions for creating a container (including OS layer, Python runtime, source code, and dependencies).
-- **Docker Container**: A running, stateful, isolated instance of an image executed as a process on the host OS kernel.
+**Q: Explain the RAG pipeline implemented in ResearchOps AI.**  
+> **A:** 
+> 1. **Ingestion & Validation**: Uploaded or downloaded open-access PDFs are verified via MIME/magic bytes (`%PDF-`) and SHA-256 checksummed.
+> 2. **Text Extraction**: PyMuPDF (`fitz`) or `pypdf` extracts text page-by-page.
+> 3. **Chunking**: A sliding window chunks text into 400–600 character passages with an overlap of 100 characters to preserve cross-boundary semantics. Each chunk is tagged with its page number and detected section title.
+> 4. **Embedding**: Chunks are embedded into 384-dimensional dense vectors.
+> 5. **Retrieval**: When a researcher asks a question, the query vector is compared against chunk vectors using cosine similarity.
+> 6. **Grounding & Citations**: The top-K ranked chunks are injected into the prompt. The LLM is instructed to answer strictly based on this evidence, generating explicit citations with paper titles, page numbers, and sections.
 
-### Q8: Why use `python:3.12-slim` instead of `alpine` or `latest`?
-**Answer:**  
-- `python:3.12-slim` is based on Debian Slim, offering a tiny footprint (~150MB) while maintaining full compatibility with standard C-extensions (glibc) used by Python packages, avoiding musl libc compilation issues common in Alpine.
-- Pinned version `3.12-slim` ensures deterministic, reproducible builds across development and production environments.
-
-### Q9: Why is running the container as a non-root user important?
-**Answer:**  
-Running as `root` inside a container presents security risks: if an attacker exploits a remote code execution vulnerability in the application or runtime, they gain root privileges on the container and potentially the host system. ResearchLite creates an unprivileged user (`appuser`, UID 1000) in the Dockerfile to enforce the principle of least privilege.
+**Q: How does the system prevent LLM hallucinations?**  
+> **A:** Hallucinations are mitigated through:
+> - Strict temperature settings (0.2) in generative prompts.
+> - Explicit constraint instructions forbidding statements outside the provided citations.
+> - An offline extractive engine that quotes evidence directly from retrieved chunks when external LLM APIs are absent.
+> - Literature review sections are built from stored abstracts/metadata rather than invented narrative.
 
 ---
 
-## 5. API Testing & Verification
+## 4. DevOps & Observability
 
-### Q10: How do you test external API calls reliably without internet dependency in CI?
-**Answer:**  
-In unit tests (`tests/test_providers.py`), we use `unittest.mock.patch` to intercept HTTP client calls (`httpx.AsyncClient.get`) and supply mocked `httpx.Response` objects containing canned JSON fixtures. This guarantees tests are fast, deterministic, and pass even during offline development or external API outages.
+**Q: How do your health probes differ between liveness and readiness?**  
+> **A:**
+> - **Liveness (`GET /health`)**: Checks if the FastAPI Python process is running and responding. If this fails, container orchestrators (Docker/Kubernetes) immediately restart the container.
+> - **Readiness (`GET /ready`)**: Verifies that downstream dependencies (PostgreSQL database, Redis broker, and Celery workers) are operational and capable of processing traffic. If a dependency is offline, the container is taken out of the load balancer rotation without being unnecessarily killed.
+
+**Q: How does Prometheus scrape metrics from the application?**  
+> **A:** The `/metrics` endpoint exposes Prometheus exposition text with gauges backed by live database counts (`researchops_total_papers`, `researchops_total_documents`, `researchops_total_chunks`, `researchops_total_projects`, `researchops_active_background_jobs`) plus measured provider probe latencies (`researchops_provider_latency_ms`). Prometheus scrapes this endpoint, and Grafana visualizes those real gauges.
+
+**Q: What is the purpose of the Celery worker and Redis in this architecture?**  
+> **A:** Heavy operations—such as downloading 30MB PDFs, running text extraction on 50 pages, and computing embeddings—would block the ASGI event loop if executed synchronously inside an HTTP request. Offloading these jobs to Celery workers via a Redis queue allows API requests to return immediately with a job ID, keeping the user interface fast and responsive.
