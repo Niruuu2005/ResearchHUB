@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: researchops-worker
+  namespace: researchops
+  labels:
+    app.kubernetes.io/name: researchops-worker
+    app.kubernetes.io/component: background-worker
+    app.kubernetes.io/part-of: researchops-platform
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: researchops-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: researchops-worker
+        app.kubernetes.io/component: background-worker
+    spec:
+      containers:
+        - name: worker
+          image: researchops-worker:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - app.workers.celery_app.celery_app
+            - worker
+            - --loglevel=info
+            - -c
+            - "2"
+          envFrom:
+            - configMapRef:
+                name: researchops-config
+            - secretRef:
+                name: researchops-secret
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: doc-storage
+              mountPath: /app/data/documents
+            - name: export-storage
+              mountPath: /app/data/exports
+      volumes:
+        - name: doc-storage
+          persistentVolumeClaim:
+            claimName: doc-storage-pvc
+        - name: export-storage
+          persistentVolumeClaim:
+            claimName: export-storage-pvc

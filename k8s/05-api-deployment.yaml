@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: doc-storage-pvc
+  namespace: researchops
+  labels:
+    app.kubernetes.io/name: researchops-api
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: export-storage-pvc
+  namespace: researchops
+  labels:
+    app.kubernetes.io/name: researchops-api
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: researchops-api
+  namespace: researchops
+  labels:
+    app.kubernetes.io/name: researchops-api
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: researchops-platform
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: researchops-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: researchops-api
+        app.kubernetes.io/component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: researchops-api:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: researchops-config
+            - secretRef:
+                name: researchops-secret
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          volumeMounts:
+            - name: doc-storage
+              mountPath: /app/data/documents
+            - name: export-storage
+              mountPath: /app/data/exports
+      volumes:
+        - name: doc-storage
+          persistentVolumeClaim:
+            claimName: doc-storage-pvc
+        - name: export-storage
+          persistentVolumeClaim:
+            claimName: export-storage-pvc

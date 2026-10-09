@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: researchops
+  labels:
+    app.kubernetes.io/name: researchops
+    app.kubernetes.io/part-of: researchops-platform
