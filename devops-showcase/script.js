@@ -638,12 +638,50 @@ function initMonitoringCharts() {
 
   drawLatencyChart(canvasLatency);
   drawThroughputChart(canvasThroughput);
+  fetchLiveGrafanaStats();
 
   // Micro periodic tick to keep telemetry feeling alive
   setInterval(() => {
     drawLatencyChart(canvasLatency);
     drawThroughputChart(canvasThroughput);
   }, 4000);
+
+  setInterval(fetchLiveGrafanaStats, 10000);
+}
+
+async function fetchLiveGrafanaStats() {
+  try {
+    const urls = ['/api-proxy/metrics', 'http://localhost:8000/metrics'];
+    for (const url of urls) {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 1500);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const text = await res.text();
+        const extract = (metric) => {
+          const match = text.match(new RegExp(`^${metric}\\s+([0-9.]+)`, 'm'));
+          return match ? Math.round(parseFloat(match[1])) : null;
+        };
+        const papers = extract('researchops_total_papers');
+        const docs = extract('researchops_total_documents');
+        const chunks = extract('researchops_total_chunks');
+        const jobs = extract('researchops_active_background_jobs');
+
+        const elPapers = document.getElementById('stat-papers');
+        const elDocs = document.getElementById('stat-docs');
+        const elChunks = document.getElementById('stat-chunks');
+        const elJobs = document.getElementById('stat-jobs');
+
+        if (papers !== null && elPapers) elPapers.textContent = papers.toLocaleString();
+        if (docs !== null && elDocs) elDocs.textContent = docs.toLocaleString();
+        if (chunks !== null && elChunks) elChunks.textContent = chunks.toLocaleString();
+        if (jobs !== null && elJobs) elJobs.textContent = jobs.toLocaleString();
+        break;
+      } catch (err) {}
+    }
+  } catch (e) {}
 }
 
 function drawLatencyChart(canvas) {

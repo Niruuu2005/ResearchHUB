@@ -2,14 +2,14 @@
   "annotations": { "list": [] },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
-  "liveNow": false,
+  "liveNow": true,
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "id": 1,
       "title": "Papers in Library",
       "type": "stat",
@@ -22,12 +22,19 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#38bdf8", "mode": "fixed" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#38bdf8", "value": null }] }
+        }
       }
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "id": 2,
       "title": "Indexed Documents",
       "type": "stat",
@@ -40,12 +47,19 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#818cf8", "mode": "fixed" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#818cf8", "value": null }] }
+        }
       }
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "id": 3,
       "title": "Vector Chunks",
       "type": "stat",
@@ -58,12 +72,19 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#a855f7", "mode": "fixed" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#a855f7", "value": null }] }
+        }
       }
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
       "id": 4,
       "title": "Active Background Jobs",
       "type": "stat",
@@ -76,13 +97,158 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
       }
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
       "id": 5,
+      "title": "Database Status",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_database_healthy",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "color": "red", "index": 0, "text": "DOWN" },
+                "1": { "color": "green", "index": 1, "text": "HEALTHY" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "id": 6,
+      "title": "Platform Uptime",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_process_uptime_seconds",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "fixedColor": "#10b981", "mode": "fixed" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#10b981", "value": null }] }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 4 },
+      "id": 7,
+      "title": "Circuit Breakers (0=CLOSED / 1=HALF-OPEN / 2=OPEN)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "researchops_circuit_breaker_state",
+          "refId": "A",
+          "legendFormat": "{{provider}}"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "color": "green", "index": 0, "text": "CLOSED (Normal)" },
+                "1": { "color": "yellow", "index": 1, "text": "HALF-OPEN (Probe)" },
+                "2": { "color": "red", "index": 2, "text": "OPEN (Tripped)" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 4 },
+      "id": 8,
+      "title": "HTTP Traffic (Requests Handled)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (method, status) (http_requests_total)",
+          "refId": "A",
+          "legendFormat": "{{method}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 9,
       "title": "Research Projects",
       "type": "timeseries",
       "targets": [
@@ -91,30 +257,50 @@
           "refId": "A",
           "legendFormat": "projects"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#06b6d4", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20
+          }
+        }
+      }
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "id": 10,
       "title": "Provider Probe Latency (ms)",
       "type": "timeseries",
       "targets": [
         {
           "expr": "researchops_provider_latency_ms",
           "refId": "A",
-          "legendFormat": "{{provider}}"
+          "legendFormat": "{{provider}} ({{status}})"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          }
+        }
+      }
     }
   ],
-  "refresh": "30s",
+  "refresh": "5s",
   "schemaVersion": 38,
-  "tags": ["researchops"],
+  "tags": ["researchops", "devops", "sre"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timezone": "browser",
   "title": "ResearchOps Overview",
   "uid": "researchops-overview",
-  "version": 2
+  "version": 3
 }

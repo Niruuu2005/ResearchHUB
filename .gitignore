@@ -51,3 +51,4 @@ ansible/inventory.ini
 
 
 server.log
+.tools/

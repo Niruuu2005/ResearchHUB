@@ -994,9 +994,19 @@ Click "Run Deployment Simulation" to execute step-by-step walkthrough...</pre>
         <div class="card glass-card">
           <div class="card-header-flex">
             <div class="card-title">Grafana Observability Dashboard: <code>ResearchOps Overview</code></div>
-            <span class="badge-simulated">Simulated Telemetry (Visualizing Verified Gauges)</span>
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <a href="http://localhost:3001" target="_blank" class="btn btn-sm btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; padding: 0.35rem 0.75rem; background: linear-gradient(135deg, #f97316, #ea580c); color: white; border-radius: 6px;">
+                <span>📊 Open Grafana (:3001)</span>
+              </a>
+              <a href="http://localhost:9090" target="_blank" class="btn btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; padding: 0.35rem 0.75rem; background: rgba(255, 255, 255, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px;">
+                <span>⏱️ Prometheus UI (:9090)</span>
+              </a>
+              <a href="http://localhost:8000/metrics" target="_blank" class="btn btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; padding: 0.35rem 0.75rem; background: rgba(255, 255, 255, 0.05); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 6px;">
+                <span>📡 Raw /metrics</span>
+              </a>
+            </div>
           </div>
-          <p class="card-intro">Mirroring the panels defined in <code>monitoring/grafana/dashboards/researchops.json</code>:</p>
+          <p class="card-intro">Live dashboard panels mirroring <code>monitoring/grafana/dashboards/researchops.json</code> (auto-synced with live DB & metrics):</p>
 
           <!-- Stat Panels Grid -->
           <div class="grafana-stat-grid">

@@ -66,6 +66,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def prometheus_telemetry_middleware(request, call_next):
+    """Intercept HTTP requests to record throughput, latency, and status codes for Prometheus."""
+    import time
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    try:
+        from app.services.telemetry import telemetry
+        telemetry.record_request(request.method, request.url.path, response.status_code, duration)
+    except Exception:
+        pass
+    return response
+
 # 1. Mount legacy compatibility routes (/health, /research, /papers)
 app.include_router(legacy_router)
 

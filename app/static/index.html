@@ -1494,9 +1494,53 @@
                     </div>
 
                     <div id="ops-tab-metrics" class="tab-pane">
-                        <div class="card">
-                            <h4 style="margin-bottom: 1rem;">Prometheus Metrics (/metrics)</h4>
-                            <pre id="ops-raw-metrics" style="background: rgba(8, 12, 20, 0.8); padding: 1.25rem; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.8rem; overflow-x: auto; max-height: 450px; color: #34d399;"></pre>
+                        <div class="card" style="margin-bottom: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 1.15rem; font-weight: 600;">Prometheus Scraping & Grafana Dashboards</h4>
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-muted);">Real-time metrics exposition stream scraped by Prometheus (:9090) and rendered in Grafana (:3001).</p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <a href="http://localhost:3001" target="_blank" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 0.45rem 0.9rem; text-decoration: none; background: linear-gradient(135deg, #f97316, #ea580c); color: #fff;">
+                                        <span>📊 Open Grafana (:3001)</span>
+                                    </a>
+                                    <a href="http://localhost:9090" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 0.45rem 0.9rem; text-decoration: none;">
+                                        <span>⏱️ Prometheus UI (:9090)</span>
+                                    </a>
+                                    <a href="http://localhost:9090/targets" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 0.45rem 0.9rem; text-decoration: none;">
+                                        <span>🎯 Targets (:9090/targets)</span>
+                                    </a>
+                                    <a href="/metrics" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 0.45rem 0.9rem; text-decoration: none;">
+                                        <span>📡 Raw /metrics</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; text-align: center;">
+                                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Scrape Status</div>
+                                    <div style="font-size: 1.15rem; font-weight: 700; color: #10b981; margin-top: 0.25rem;">● EXPORTING</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">5s scrape cycle</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; text-align: center;">
+                                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Database Health</div>
+                                    <div style="font-size: 1.15rem; font-weight: 700; color: #38bdf8; margin-top: 0.25rem;">HEALTHY</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">researchops_database_healthy</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; text-align: center;">
+                                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Grafana Dashboard</div>
+                                    <div style="font-size: 1.15rem; font-weight: 700; color: #f97316; margin-top: 0.25rem;">ResearchOps</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">UID: researchops-overview</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; text-align: center;">
+                                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Circuit Breakers</div>
+                                    <div style="font-size: 1.15rem; font-weight: 700; color: #34d399; margin-top: 0.25rem;">3 CLOSED (0)</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">OpenAlex / Crossref / Wiki</div>
+                                </div>
+                            </div>
+
+                            <h5 style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Raw Prometheus Exposition Format:</h5>
+                            <pre id="ops-raw-metrics" style="background: rgba(8, 12, 20, 0.8); padding: 1.25rem; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.8rem; overflow-x: auto; max-height: 400px; color: #34d399;"></pre>
                         </div>
                     </div>
 

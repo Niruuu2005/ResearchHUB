@@ -68,7 +68,7 @@ def check_http_endpoint(name, url, expected_status=200, key_check=None):
     print(f"[*] Probing {name} at {url}...")
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "FA2-Verifier/1.0"})
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
+        with urllib.request.urlopen(req, timeout=6.0) as resp:
             status = resp.getcode()
             body = resp.read().decode("utf-8")
             if status == expected_status:

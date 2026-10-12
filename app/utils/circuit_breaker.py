@@ -27,6 +27,8 @@ class CircuitBreaker:
       HALF_OPEN -> (failure) -> OPEN
     """
 
+    _registry: dict[str, "CircuitBreaker"] = {}
+
     def __init__(
         self,
         name: str,
@@ -39,6 +41,12 @@ class CircuitBreaker:
         self.state = CircuitState.CLOSED
         self.failure_count = 0
         self.last_state_change = time.time()
+        CircuitBreaker._registry[name] = self
+
+    @classmethod
+    def get_all(cls) -> dict[str, "CircuitBreaker"]:
+        """Return all registered circuit breaker instances."""
+        return dict(cls._registry)
 
     def record_success(self):
         """Record successful call, resetting circuit to CLOSED."""
