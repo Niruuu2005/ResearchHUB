@@ -38,6 +38,16 @@ class Settings:
     # Database
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./researchops.db")
 
+    # Google OAuth 2.0 & Session Security
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    google_redirect_uri: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+    session_secret_key: str = os.getenv("SESSION_SECRET_KEY", "dev-insecure-secret-key-32chars-minimum-change-prod")
+    app_base_url: str = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "researchhub_session")
+    session_max_age_seconds: int = int(os.getenv("SESSION_MAX_AGE_SECONDS", str(7 * 24 * 3600)))
+    allow_mock_auth: bool = os.getenv("ALLOW_MOCK_AUTH", "true").lower() in ("true", "1", "yes")
+
     # Redis & Queue
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 

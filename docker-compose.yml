@@ -21,6 +21,12 @@ services:
       - USE_CELERY=true
       - EMBEDDING_PROVIDER=auto
       - EMBEDDING_MODEL=all-MiniLM-L6-v2
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8000/auth/google/callback}
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY:-dev-insecure-secret-key-32chars-minimum-change-prod}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8000}
+      - ALLOW_MOCK_AUTH=${ALLOW_MOCK_AUTH:-true}
     volumes:
       - doc_data:/app/data/documents
       - export_data:/app/data/exports
@@ -144,6 +150,17 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api
+    networks:
+      - researchops-net
+
+  devops-showcase:
+    build:
+      context: ./devops-showcase
+      dockerfile: Dockerfile
+    container_name: researchops-devops-showcase
+    restart: unless-stopped
+    ports:
+      - "8085:80"
     networks:
       - researchops-net
 

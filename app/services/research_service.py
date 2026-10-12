@@ -52,6 +52,7 @@ class ResearchService:
         open_access_only: bool = False,
         sources_filter: Optional[List[str]] = None,
         db: Optional[Session] = None,
+        user_id: Optional[str] = None,
     ) -> ResearchResponse:
         """
         Execute comprehensive research for a topic concurrently across all providers.
@@ -68,7 +69,25 @@ class ResearchService:
                 if cached:
                     logger.info(f"Cache hit in Redis for topic '{clean_topic}'")
                     data = json.loads(cached)
-                    return ResearchResponse(**data)
+                    res = ResearchResponse(**data)
+                    if db is not None:
+                        try:
+                            session_rec = ResearchSession(
+                                user_id=str(user_id) if user_id else None,
+                                topic=clean_topic,
+                                year_from=year_from,
+                                year_to=year_to,
+                                open_access_only=open_access_only,
+                                summary=res.summary,
+                                key_points_json=json.dumps(res.key_points),
+                                warnings_json=json.dumps(res.warnings),
+                            )
+                            db.add(session_rec)
+                            db.commit()
+                            res.session_id = session_rec.id
+                        except Exception as e:
+                            logger.warning(f"Could not persist cached research session: {e}")
+                    return res
             except Exception as e:
                 logger.warning(f"Redis cache lookup failed: {e}")
 
@@ -194,6 +213,7 @@ class ResearchService:
         if db is not None:
             try:
                 session_rec = ResearchSession(
+                    user_id=str(user_id) if user_id else None,
                     topic=clean_topic,
                     year_from=year_from,
                     year_to=year_to,

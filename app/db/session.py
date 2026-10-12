@@ -25,13 +25,36 @@ def _ensure_schema_columns():
     """Add columns introduced after initial create_all (SQLite/Postgres without Alembic)."""
     try:
         inspector = inspect(engine)
-        if "export_reports" not in inspector.get_table_names():
+        table_names = set(inspector.get_table_names())
+        if not table_names:
             return
-        columns = {col["name"] for col in inspector.get_columns("export_reports")}
-        if "project_id" not in columns:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE export_reports ADD COLUMN project_id INTEGER"))
-            logger.info("Added export_reports.project_id column.")
+
+        if "export_reports" in table_names:
+            columns = {col["name"] for col in inspector.get_columns("export_reports")}
+            if "project_id" not in columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE export_reports ADD COLUMN project_id INTEGER"))
+                logger.info("Added export_reports.project_id column.")
+
+        # Ensure user_id column on user-owned tables
+        user_tables = [
+            "papers",
+            "research_projects",
+            "paper_documents",
+            "chat_sessions",
+            "research_notes",
+            "export_reports",
+            "research_sessions",
+            "background_jobs",
+        ]
+        with engine.begin() as conn:
+            for tbl in user_tables:
+                if tbl in table_names:
+                    cols = {c["name"] for c in inspector.get_columns(tbl)}
+                    if "user_id" not in cols:
+                        col_type = "VARCHAR(36)" if is_sqlite else "UUID"
+                        conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN user_id {col_type}"))
+                        logger.info(f"Added {tbl}.user_id column.")
     except Exception as exc:
         logger.warning(f"Schema column ensure skipped: {exc}")
 

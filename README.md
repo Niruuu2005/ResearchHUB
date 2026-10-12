@@ -47,7 +47,8 @@ Monitor Services, Background Queues & Metrics in ResearchOps Control Center
 8. **Literature Review Builder**: 11-section reviews grounded in saved paper abstracts/metadata (extractive synthesis, not invented prose).
 9. **Citation Manager**: Instant formatting and export in IEEE, APA, MLA, Harvard, and BibTeX styles.
 10. **Multi-Format Report Exports**: Downloadable PDF (ReportLab), Word DOCX (python-docx), Markdown, JSON, and BibTeX artifacts.
-11. **ResearchOps Control Center**: Service health, Celery job queues (when `USE_CELERY=true`), Prometheus gauges from live DB counts, and build metadata.
+11. **Google Sign-In & Multi-User Isolation**: OpenID Connect OAuth 2.0 flow with PKCE, state/nonce validation, signed session cookies, and strict PostgreSQL data isolation per user.
+12. **ResearchOps Control Center**: Service health, Celery job queues (when `USE_CELERY=true`), Prometheus gauges from live DB counts, and build metadata.
 
 ---
 
@@ -55,16 +56,17 @@ Monitor Services, Background Queues & Metrics in ResearchOps Control Center
 
 | Layer | Technology | Purpose |
 |---|---|---|
+| **Authentication** | Google OpenID Connect / OAuth 2.0 (PKCE) + PyJWT | Secure user authentication, stable `google_sub` identity, and HttpOnly session cookies |
 | **Backend Runtime** | Python 3.12+ / FastAPI / Uvicorn | High-throughput asynchronous REST API |
-| **Relational Database** | PostgreSQL 16 (pgvector image) / SQLite | Relational state; embeddings stored as JSON with Python cosine search |
+| **Relational Database** | PostgreSQL 16 (pgvector image) / SQLite | Relational state with multi-user isolation; Alembic schema migrations |
 | **Distributed Queue** | Redis 7 + Celery | Async PDF/export jobs when `USE_CELERY=true` (sync fallback otherwise) |
 | **Document Processing** | PyMuPDF (`fitz`) / pypdf | PDF text extraction and sliding-window chunking |
-| **Embeddings & Vector** | sentence-transformers or hash | 384-dim vectors; ST when installed, lexical hash fallback |
+| **Embeddings & Vector** | sentence-transformers or hash | 384-dim vectors; user-scoped similarity search |
 | **AI Reasoning** | OpenAI / Gemini / Ollama / offline extract | Configurable LLM; offline mode quotes retrieved chunks only |
 | **Observability** | Prometheus + Grafana | Live metrics scraping, latency monitoring, and healthchecks |
 | **Containerization** | Docker & Docker Compose | Multi-container reproducible runtime |
 | **CI/CD** | GitHub Actions | Automated linting, pytest with coverage, and container builds |
-| **User Interface** | Modern Single Page App (SPA) | Glassmorphic dark aesthetic, responsive sidebar, Chart.js analytics |
+| **User Interface** | Modern Single Page App (SPA) | Glassmorphic dark aesthetic, Google Sign-In modal, user dashboard |
 
 ---
 
@@ -146,6 +148,7 @@ ResearchHub/
 │   ├── main.py                  # Lifespan startup, router mounting, static serving
 │   ├── config.py                # Centralized environment configuration
 │   ├── api/                     # Modular REST API endpoints
+│   │   ├── auth.py              # Google OAuth 2.0 / OIDC login, callback, /auth/me, logout
 │   │   ├── health.py            # /health, /ready, /metrics, /api/system/version
 │   │   ├── research.py          # /api/research, history tracking
 │   │   ├── projects.py          # /api/projects workspaces CRUD
@@ -163,17 +166,20 @@ ResearchHub/
 │   ├── db/
 │   │   └── session.py           # SQLAlchemy session, engine, init_db
 │   ├── models/
-│   │   ├── database.py          # SQLAlchemy ORM models
+│   │   ├── database.py          # SQLAlchemy ORM models (User, Paper, Project, etc.)
 │   │   └── schemas.py           # Pydantic v2 validation models
-│   ├── services/                # Business logic, RAG, providers, LLM, exports
+│   ├── services/
+│   │   ├── auth_service.py      # Google OIDC token exchange, PKCE, JWKS RS256 verification
+│   │   └── ...                  # Business logic, RAG, providers, LLM, exports
 │   ├── workers/                 # Celery app & async task handlers
 │   ├── utils/                   # Text chunking, hashing, citations, files
 │   └── static/
-│       └── index.html           # Modern SPA interface (20 views, Chart.js)
+│       └── index.html           # Modern SPA interface (Google Sign-In, 20 views, Chart.js)
 ├── monitoring/
 │   └── prometheus.yml           # Prometheus scrape configuration
-├── tests/                       # 23 automated unit & integration test suites
+├── tests/                       # 51 automated unit, auth, and multi-user isolation tests
 ├── docs/                        # Architecture, API, deployment, and viva docs
+│   └── google_auth_and_user_isolation.md  # Complete Google OAuth & Multi-User Isolation guide
 ├── Dockerfile                   # Production API container image
 ├── Dockerfile.worker            # Production Celery worker container image
 ├── docker-compose.yml           # Multi-service container topology

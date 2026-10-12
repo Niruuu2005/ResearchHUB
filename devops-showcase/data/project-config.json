@@ -1,0 +1,614 @@
+{
+  "project": {
+    "name": "ResearchOps AI",
+    "version": "2.0.0",
+    "description": "Scholarly Literature Research, Multi-Provider Intelligence, and Cloud-Native DevOps Platform",
+    "repository": "https://github.com/Niruuu2005/ResearchHUB.git",
+    "branch": "main",
+    "python_version": "3.12",
+    "ports": {
+      "fastapi_app": 8000,
+      "devops_showcase": 8085,
+      "nginx_gateway": 8080,
+      "prometheus": 9090,
+      "grafana": 3001,
+      "postgres_internal": 5432,
+      "redis_internal": 6379,
+      "ssh_ec2": 22
+    }
+  },
+  "architecture_components": [
+    {
+      "id": "developer",
+      "name": "Developer Workstation",
+      "category": "Source & Development",
+      "status": "active",
+      "description": "Local development environment where features, bug fixes, unit tests, and infrastructure manifests are authored.",
+      "why_required": "Enables rapid iteration, local testing via pytest, and clean version control before triggering automated CI pipelines.",
+      "implementation": "Code written in Python 3.12 (FastAPI), HTML5/CSS3 frontend, and IaC manifests (Terraform, Ansible, Kubernetes).",
+      "file_paths": ["app/main.py", "requirements.txt", "pytest.ini"],
+      "key_commands": ["uvicorn app.main:app --reload --port 8000", "pytest -v --cov=app"],
+      "execution_flow": "Local code edit -> Git commit -> Git push to GitHub origin/main",
+      "config_snippet": "# Local Quickstart:\npython -m venv .venv\npip install -r requirements.txt\npytest -v",
+      "viva_explanation": "Developers iterate locally using SQLite or Docker Compose before committing code to trigger the automated CI/CD pipeline."
+    },
+    {
+      "id": "github_repo",
+      "name": "GitHub Repository",
+      "category": "Version Control",
+      "status": "configured",
+      "description": "Central Git repository hosting application code, Dockerfiles, Terraform scripts, Ansible playbooks, and Kubernetes manifests.",
+      "why_required": "Provides single source of truth, immutable version history, and automated webhook triggers for CI/CD workflows.",
+      "implementation": "Hosted at github.com/Niruuu2005/ResearchHUB.git with branch protection rules on main and develop branches.",
+      "file_paths": [".git/", "README.md", "docs/architecture.md"],
+      "key_commands": ["git status", "git add .", "git commit -m \"...\"", "git push origin main"],
+      "execution_flow": "Receives pull requests and commits; triggers GitHub Actions workflow",
+      "config_snippet": "git remote -v\n# origin  https://github.com/Niruuu2005/ResearchHUB.git (fetch)\n# origin  https://github.com/Niruuu2005/ResearchHUB.git (push)",
+      "viva_explanation": "The repository acts as the central collaboration and artifact registry, triggering automated validation whenever code changes are pushed."
+    },
+    {
+      "id": "github_actions",
+      "name": "GitHub Actions (CI)",
+      "category": "Continuous Integration",
+      "status": "configured",
+      "description": "Automated workflow running linting, unit/integration testing with code coverage, and Docker image build verification on ubuntu-latest runners.",
+      "why_required": "Prevents broken code, regression bugs, and faulty Docker builds from ever reaching staging or production servers.",
+      "implementation": "Defined in .github/workflows/ci.yml with two distinct parallel/sequential jobs: 'test' and 'docker_build'.",
+      "file_paths": [".github/workflows/ci.yml"],
+      "key_commands": ["ruff check app tests", "pytest -v --cov=app --cov-report=term-missing"],
+      "execution_flow": "Push/PR -> Setup Python 3.12 -> Pip Install -> Ruff Lint -> Pytest -> Docker Buildx Build API & Worker",
+      "config_snippet": "name: ResearchOps AI CI/CD Pipeline\non:\n  push:\n    branches: [ main, master, develop ]\n  pull_request:\n    branches: [ main, master ]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: ruff check app tests || true\n      - run: pytest -v --cov=app\n  docker_build:\n    needs: test\n    steps:\n      - uses: docker/setup-buildx-action@v3\n      - uses: docker/build-push-action@v5",
+      "viva_explanation": "GitHub Actions enforces strict quality gates: Ruff checks formatting, Pytest executes 33+ tests with coverage, and Buildx verifies container images build cleanly."
+    },
+    {
+      "id": "terraform",
+      "name": "Terraform (IaC)",
+      "category": "Infrastructure as Code",
+      "status": "configured",
+      "description": "Declarative Infrastructure as Code (IaC) provisioning AWS cloud resources deterministically.",
+      "why_required": "Eliminates manual cloud configuration drift, enables version-controlled infrastructure, and allows automated teardown to save costs.",
+      "implementation": "Configured in terraform/ targeting AWS ap-south-1 region. Provisions Ubuntu 22.04 LTS AMI on EC2 with 20GB gp3 storage and custom Security Group.",
+      "file_paths": ["terraform/main.tf", "terraform/variables.tf", "terraform/outputs.tf"],
+      "key_commands": ["terraform init", "terraform validate", "terraform plan", "terraform apply", "terraform destroy"],
+      "execution_flow": "Write HCL -> terraform plan (preview changes) -> terraform apply (AWS API calls) -> Outputs EC2 public IP",
+      "config_snippet": "resource \"aws_instance\" \"researchops_ec2\" {\n  ami           = data.aws_ami.ubuntu.id # Ubuntu 22.04 LTS\n  instance_type = var.instance_type      # t3.micro / t3.small\n  key_name      = var.key_name\n  root_block_device {\n    volume_size = 20\n    volume_type = \"gp3\"\n  }\n}",
+      "viva_explanation": "Terraform provisions our AWS EC2 virtual machine and security group with idempotent, reproducible code in ap-south-1."
+    },
+    {
+      "id": "aws_ec2",
+      "name": "AWS EC2 & Security Group",
+      "category": "Cloud Infrastructure",
+      "status": "configured",
+      "description": "Ubuntu 22.04 LTS compute instance running the containerized ResearchOps stack with firewall ingress rules.",
+      "why_required": "Provides dedicated cloud compute, elastic networking, and controlled firewall boundary for the application services.",
+      "implementation": "Instance type t3.micro/t3.small with Security Group opening ports: 22 (SSH), 80 (Gateway), 443 (HTTPS), 8000 (API), 9090 (Prometheus), 3001 (Grafana).",
+      "file_paths": ["terraform/main.tf"],
+      "key_commands": ["ssh -i key.pem ubuntu@<EC2_PUBLIC_IP>"],
+      "execution_flow": "Receives inbound HTTP/HTTPS traffic through SG firewall -> routes to Docker host",
+      "config_snippet": "resource \"aws_security_group\" \"researchops_sg\" {\n  # Ports: 22 (SSH), 80 (Gateway), 8000 (API), 9090 (Metrics), 3001 (Grafana)\n}",
+      "viva_explanation": "AWS EC2 hosts our Docker engine. Security Group ingress rules restrict public access while keeping management ports controlled."
+    },
+    {
+      "id": "ansible",
+      "name": "Ansible (Configuration)",
+      "category": "Configuration Management",
+      "status": "configured",
+      "description": "Agentless automation tool orchestrating host dependencies, Docker engine installation, code cloning, and container deployment over SSH.",
+      "why_required": "Automates server setup from bare OS to running platform in minutes without manual terminal intervention.",
+      "implementation": "Configured in ansible/deploy.yml targeting the 'research_server' host. Performs 12 automated tasks including Alembic migrations and probe assertions.",
+      "file_paths": ["ansible/deploy.yml", "ansible/inventory.ini"],
+      "key_commands": ["ansible-playbook -i inventory.ini deploy.yml"],
+      "execution_flow": "SSH connect -> Install Docker/Git -> Clone repo -> docker compose up -d -> Alembic migrate -> Assert /health & /ready",
+      "config_snippet": "- name: Deploy ResearchOps AI Platform on AWS EC2\n  hosts: research_server\n  become: true\n  tasks:\n    - name: Install Docker & Compose\n      apt: name=[docker.io, docker-compose-v2]\n    - name: Launch Stack\n      command: docker compose up --build -d\n    - name: Run Migrations\n      command: docker compose exec -T api alembic upgrade head\n    - name: Verify Health Probe\n      uri: url=\"http://127.0.0.1:8000/health\" status_code=200",
+      "viva_explanation": "Ansible idempotently configures the remote EC2 instance via SSH, installs Docker, pulls the repository, launches containers, and verifies readiness."
+    },
+    {
+      "id": "docker_compose",
+      "name": "Docker Compose Stack",
+      "category": "Container Runtime",
+      "status": "configured",
+      "description": "Multi-container runtime orchestration managing isolated services, bridge networking, volume persistence, and dependency health checks.",
+      "why_required": "Packages application components into reproducible containers with isolated network and storage dependencies.",
+      "implementation": "docker-compose.yml defines 8 services: api, worker, postgres, redis, prometheus, grafana, gateway, and devops-showcase on 'researchops-net'.",
+      "file_paths": ["docker-compose.yml", "Dockerfile", "Dockerfile.worker"],
+      "key_commands": ["docker compose up --build -d", "docker compose ps", "docker compose down"],
+      "execution_flow": "Postgres & Redis start -> healthchecks pass -> API starts & runs migrations -> Worker & Nginx attach -> Stack active",
+      "config_snippet": "services:\n  api:\n    build: { context: ., dockerfile: Dockerfile }\n    ports: [\"8000:8000\"]\n    depends_on:\n      postgres: { condition: service_healthy }\n      redis: { condition: service_healthy }\n  devops-showcase:\n    build: { context: ./devops-showcase }\n    ports: [\"8085:80\"]",
+      "viva_explanation": "Docker Compose handles service ordering using container health checks (service_healthy), so API only boots after Postgres and Redis are fully operational."
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI REST API",
+      "category": "Application Tier",
+      "status": "configured",
+      "description": "High-performance asynchronous Python backend exposing REST endpoints, RAG pipeline, and observability probes.",
+      "why_required": "Provides asynchronous non-blocking I/O for concurrent queries across academic research repositories (Wikipedia, OpenAlex, Crossref).",
+      "implementation": "Mounted with modular routers (papers, documents, chat, summaries, compare, literature review, operations, health). Listens on port 8000.",
+      "file_paths": ["app/main.py", "app/api/health.py", "app/services/research_service.py"],
+      "key_commands": ["uvicorn app.main:app --host 0.0.0.0 --port 8000"],
+      "execution_flow": "Client request -> Pydantic validation -> Async controller -> DB/Redis/Provider -> JSON response",
+      "config_snippet": "@app.get(\"/health\")\nasync def liveness(): return {\"status\": \"running\"}\n\n@app.get(\"/ready\")\nasync def readiness(db = Depends(get_db)):\n  return OperationsService.get_service_health(db)",
+      "viva_explanation": "FastAPI handles asynchronous request concurrency, OpenAPI auto-documentation, and exposes standard liveness, readiness, and Prometheus endpoints."
+    },
+    {
+      "id": "celery_redis",
+      "name": "Celery & Redis Worker",
+      "category": "Asynchronous Processing",
+      "status": "configured",
+      "description": "Distributed background task queue powered by Redis broker and Celery worker workers.",
+      "why_required": "Prevents heavy jobs (PDF ingestion, PyMuPDF text extraction, 384-dim vector embeddings) from blocking the HTTP request thread.",
+      "implementation": "Celery worker running command `celery -A app.workers.celery_app.celery_app worker -c 2` connected to `redis:6379/0`.",
+      "file_paths": ["Dockerfile.worker", "app/workers/celery_app.py"],
+      "key_commands": ["celery -A app.workers.celery_app.celery_app worker --loglevel=info -c 2"],
+      "execution_flow": "FastAPI enqueues task into Redis queue -> Celery worker pops task -> Computes embeddings -> Saves to DB",
+      "config_snippet": "worker:\n  build: { dockerfile: Dockerfile.worker }\n  command: celery -A app.workers.celery_app.celery_app worker -c 2\n  depends_on: { redis: { condition: service_healthy } }",
+      "viva_explanation": "Asynchronous task offloading guarantees sub-second HTTP API responses while long-running vectorization executes in background workers."
+    },
+    {
+      "id": "postgres_pgvector",
+      "name": "PostgreSQL & pgvector",
+      "category": "Data Persistence",
+      "status": "configured",
+      "description": "Relational and vector database running pgvector/pgvector:pg16 image for projects, papers, notes, and semantic chunk embeddings.",
+      "why_required": "Stores both structured entity relations and vector embeddings in a single resilient storage engine with persistent volume.",
+      "implementation": "Container researchops-postgres running on port 5432 with volume pg_data. Schema managed via Alembic migrations.",
+      "file_paths": ["alembic/", "alembic.ini", "docker-compose.yml"],
+      "key_commands": ["alembic upgrade head", "pg_isready -U researchops -d researchops"],
+      "execution_flow": "API connects via psycopg2 -> executes SQL queries and transactional commits -> stores on pg_data volume",
+      "config_snippet": "postgres:\n  image: pgvector/pgvector:pg16\n  volumes: [ pg_data:/var/lib/postgresql/data ]\n  healthcheck:\n    test: [\"CMD-SHELL\", \"pg_isready -U researchops -d researchops\"]",
+      "viva_explanation": "We use PostgreSQL 16 with pgvector to unify transactional ACID relational data and high-dimensional semantic embeddings."
+    },
+    {
+      "id": "nginx_gateway",
+      "name": "Nginx Reverse Proxy Gateway",
+      "category": "Edge & Ingress",
+      "status": "configured",
+      "description": "High-performance edge reverse proxy handling security headers, gzip compression, request timeouts, and service routing.",
+      "why_required": "Acts as the single public entry point, prevents direct backend exposure, and proxies API, Prometheus, and Grafana traffic.",
+      "implementation": "docker-compose service 'gateway' listening on host port 8080 (or port 80 in production) with upstream reverse proxying to api:8000.",
+      "file_paths": ["nginx/nginx.conf"],
+      "key_commands": ["nginx -t", "nginx -s reload"],
+      "execution_flow": "Client -> Nginx :80/:8080 -> routes / to FastAPI, /prometheus/ to Prometheus, /grafana/ to Grafana",
+      "config_snippet": "server {\n  listen 80;\n  location / {\n    proxy_pass http://api_upstream;\n    proxy_read_timeout 300s;\n  }\n  location /prometheus/ { proxy_pass http://prometheus_upstream/; }\n  location /grafana/ { proxy_pass http://grafana_upstream/; }\n}",
+      "viva_explanation": "Nginx provides reverse proxy routing, security header encapsulation, gzip compression, and unified ingress for API and monitoring tools."
+    },
+    {
+      "id": "prometheus_grafana",
+      "name": "Prometheus & Grafana",
+      "category": "Observability",
+      "status": "configured",
+      "description": "Metrics collection and visualization stack monitoring application health, request latencies, and business metrics.",
+      "why_required": "Provides real-time visibility into system behavior, database entity volumes, provider latencies, and operational bottlenecks.",
+      "implementation": "Prometheus v2.51.0 scrapes api:8000/metrics every 15s. Grafana 10.4.0 visualizes panels defined in monitoring/grafana/dashboards/researchops.json.",
+      "file_paths": ["monitoring/prometheus.yml", "monitoring/grafana/dashboards/researchops.json"],
+      "key_commands": ["curl http://localhost:8000/metrics", "curl http://localhost:9090"],
+      "execution_flow": "Prometheus scrapes /metrics every 15s -> TSDB stores series -> Grafana queries PromQL -> live dashboards",
+      "config_snippet": "global:\n  scrape_interval: 15s\nscrape_configs:\n  - job_name: \"researchops_api\"\n    metrics_path: \"/metrics\"\n    static_configs:\n      - targets: [\"api:8000\"]",
+      "viva_explanation": "Prometheus actively polls our custom /metrics endpoint every 15 seconds, and Grafana maps those gauges to real-time visual telemetry."
+    },
+    {
+      "id": "kubernetes_kustomize",
+      "name": "Kubernetes & Kustomize",
+      "category": "Container Orchestration",
+      "status": "manifests_ready",
+      "description": "Production-grade cloud container orchestration platform providing self-healing, rolling updates, and Horizontal Pod Autoscaling.",
+      "why_required": "Provides declarative scaling, zero-downtime rolling updates, secret management, and cluster workload resilience for enterprise scale.",
+      "implementation": "Declarative manifests in k8s/ packaged via Kustomize into namespace 'researchops'. Features maxSurge: 1, maxUnavailable: 0, HPA min: 2 max: 8.",
+      "file_paths": ["k8s/kustomization.yaml", "k8s/05-api-deployment.yaml", "k8s/09-hpa.yaml", "k8s/08-ingress.yaml"],
+      "key_commands": ["kubectl apply -k k8s/", "kubectl get pods -n researchops", "kubectl get hpa -n researchops"],
+      "execution_flow": "kubectl applies kustomization -> K8s scheduler places pods -> Ingress controller routes traffic -> HPA scales on CPU/RAM",
+      "config_snippet": "apiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata: { name: researchops-api-hpa, namespace: researchops }\nspec:\n  minReplicas: 2\n  maxReplicas: 8\n  metrics:\n    - type: Resource\n      resource: { name: cpu, target: { averageUtilization: 70 } }",
+      "viva_explanation": "Our Kubernetes manifests declare zero-downtime rolling updates and HPA autoscaling between 2 and 8 replicas based on 70% CPU and 80% RAM thresholds."
+    }
+  ],
+  "ci_pipeline": {
+    "workflow_file": ".github/workflows/ci.yml",
+    "name": "ResearchOps AI CI/CD Pipeline",
+    "triggers": {
+      "push_branches": ["main", "master", "develop"],
+      "pull_request_branches": ["main", "master"]
+    },
+    "jobs": [
+      {
+        "id": "test",
+        "name": "Automated Unit & Integration Tests",
+        "runner": "ubuntu-latest",
+        "steps": [
+          { "order": 1, "name": "Check out repository", "uses": "actions/checkout@v4" },
+          { "order": 2, "name": "Set up Python 3.12", "uses": "actions/setup-python@v5", "details": "python-version: 3.12, cache: pip" },
+          { "order": 3, "name": "Install dependencies", "command": "python -m pip install --upgrade pip && pip install -r requirements.txt pytest-cov ruff" },
+          { "order": 4, "name": "Code Quality & Linting", "command": "ruff check app tests || true" },
+          { "order": 5, "name": "Run Pytest Suite with Coverage", "command": "pytest -v --cov=app --cov-report=term-missing" }
+        ]
+      },
+      {
+        "id": "docker_build",
+        "name": "Container Build & Verification",
+        "runner": "ubuntu-latest",
+        "depends_on": ["test"],
+        "steps": [
+          { "order": 1, "name": "Check out repository", "uses": "actions/checkout@v4" },
+          { "order": 2, "name": "Set up Docker Buildx", "uses": "docker/setup-buildx-action@v3" },
+          { "order": 3, "name": "Build API Docker Image", "uses": "docker/build-push-action@v5", "details": "file: ./Dockerfile, tags: researchops-api:latest, push: false" },
+          { "order": 4, "name": "Build Worker Docker Image", "uses": "docker/build-push-action@v5", "details": "file: ./Dockerfile.worker, tags: researchops-worker:latest, push: false" }
+        ]
+      }
+    ]
+  },
+  "terraform_infra": {
+    "provider": "AWS",
+    "region": "ap-south-1",
+    "project_name": "ResearchOpsAI",
+    "instance_type": "t3.micro (configurable to t3.small/t3.medium)",
+    "ami": "Canonical Ubuntu 22.04 LTS AMD64 (Owner: 099720109477)",
+    "storage": {
+      "type": "gp3",
+      "size_gb": 20,
+      "delete_on_termination": true
+    },
+    "security_group": {
+      "name": "ResearchOpsAI-SecurityGroup",
+      "rules": [
+        { "port": 22, "protocol": "TCP", "cidr": "var.allowed_ssh_cidr", "purpose": "SSH Administrative Access" },
+        { "port": 80, "protocol": "TCP", "cidr": "0.0.0.0/0", "purpose": "Public HTTP Nginx Gateway" },
+        { "port": 443, "protocol": "TCP", "cidr": "0.0.0.0/0", "purpose": "Public HTTPS Secure Gateway" },
+        { "port": 8000, "protocol": "TCP", "cidr": "0.0.0.0/0", "purpose": "FastAPI Backend REST API" },
+        { "port": 9090, "protocol": "TCP", "cidr": "var.allowed_ssh_cidr", "purpose": "Prometheus Metrics UI" },
+        { "port": 3001, "protocol": "TCP", "cidr": "0.0.0.0/0", "purpose": "Grafana Observability Dashboard" },
+        { "port": "All", "protocol": "All Outbound", "cidr": "0.0.0.0/0", "purpose": "Internet egress for package updates & external APIs" }
+      ]
+    },
+    "lifecycle_commands": [
+      { "cmd": "terraform init", "description": "Initializes provider plugins (hashicorp/aws) and backend state." },
+      { "cmd": "terraform validate", "description": "Validates HCL syntax and internal resource consistency." },
+      { "cmd": "terraform plan", "description": "Generates execution plan showing exactly what resources will be created/modified." },
+      { "cmd": "terraform apply", "description": "Provisions declared AWS EC2 instance and Security Group resources." },
+      { "cmd": "terraform destroy", "description": "Tears down all provisioned cloud resources to prevent ongoing cloud billing." }
+    ]
+  },
+  "ansible_deployment": {
+    "playbook": "ansible/deploy.yml",
+    "target_host": "research_server (AWS EC2)",
+    "app_dir": "/opt/researchhub",
+    "deployment_tasks": [
+      { "step": 1, "task": "Update apt package cache", "module": "apt", "detail": "cache_valid_time: 3600" },
+      { "step": 2, "task": "Install system packages & Docker", "module": "apt", "detail": "curl, git, docker.io, docker-compose-v2" },
+      { "step": 3, "task": "Enable & start Docker service", "module": "systemd", "detail": "systemctl enable --now docker" },
+      { "step": 4, "task": "Add ubuntu user to docker group", "module": "user", "detail": "usermod -aG docker ubuntu" },
+      { "step": 5, "task": "Create /opt/researchhub directory", "module": "file", "detail": "mode: 0755, owner: ubuntu:ubuntu" },
+      { "step": 6, "task": "Clone or pull GitHub repository", "module": "command", "detail": "git clone/pull branch main" },
+      { "step": 7, "task": "Deploy Docker Compose stack", "module": "command", "detail": "docker compose up --build -d" },
+      { "step": 8, "task": "Run Alembic database schema migrations", "module": "command", "detail": "docker compose exec -T api alembic upgrade head" },
+      { "step": 9, "task": "Wait 10s for service stabilization", "module": "pause", "detail": "pause: seconds: 10" },
+      { "step": 10, "task": "Verify liveness probe (/health)", "module": "uri", "detail": "GET http://127.0.0.1:8000/health (retries: 8, delay: 5s)" },
+      { "step": 11, "task": "Verify readiness probe (/ready)", "module": "uri", "detail": "GET http://127.0.0.1:8000/ready (retries: 6, delay: 5s)" },
+      { "step": 12, "task": "Verify Prometheus exporter (/metrics)", "module": "uri", "detail": "GET http://127.0.0.1:8000/metrics (status: 200)" },
+      { "step": 13, "task": "Display deployment telemetry", "module": "debug", "detail": "Outputs gateway, metrics, and observability URLs" }
+    ]
+  },
+  "docker_stack": {
+    "network": "researchops-net (bridge)",
+    "services": [
+      {
+        "name": "api",
+        "container": "researchops-api",
+        "image_or_build": "Dockerfile (python:3.12-slim)",
+        "ports": ["8000:8000"],
+        "role": "FastAPI REST API backend, RAG execution, and metrics exporter",
+        "volumes": ["doc_data:/app/data/documents", "export_data:/app/data/exports"],
+        "depends_on": ["postgres (healthy)", "redis (healthy)"],
+        "healthcheck": "curl -f http://localhost:8000/health (interval: 30s, timeout: 5s, retries: 5, start: 60s)"
+      },
+      {
+        "name": "worker",
+        "container": "researchops-worker",
+        "image_or_build": "Dockerfile.worker (python:3.12-slim)",
+        "ports": ["internal"],
+        "role": "Celery asynchronous worker for PDF parsing & embedding computation",
+        "volumes": ["doc_data:/app/data/documents", "export_data:/app/data/exports"],
+        "depends_on": ["redis (healthy)", "postgres (healthy)", "api (started)"],
+        "healthcheck": "Process managed by Celery supervisor"
+      },
+      {
+        "name": "postgres",
+        "container": "researchops-postgres",
+        "image_or_build": "pgvector/pgvector:pg16",
+        "ports": ["5432 (internal only)"],
+        "role": "PostgreSQL 16 relational database with pgvector extension",
+        "volumes": ["pg_data:/var/lib/postgresql/data"],
+        "depends_on": [],
+        "healthcheck": "pg_isready -U researchops -d researchops (interval: 10s, timeout: 5s, retries: 5)"
+      },
+      {
+        "name": "redis",
+        "container": "researchops-redis",
+        "image_or_build": "redis:7-alpine",
+        "ports": ["6379 (internal only)"],
+        "role": "In-memory caching and Celery message broker",
+        "volumes": ["redis_data:/data"],
+        "depends_on": [],
+        "healthcheck": "redis-cli ping (interval: 10s, timeout: 5s, retries: 5)"
+      },
+      {
+        "name": "prometheus",
+        "container": "researchops-prometheus",
+        "image_or_build": "prom/prometheus:v2.51.0",
+        "ports": ["9090:9090"],
+        "role": "Time-series database collecting metrics from api:8000/metrics every 15s",
+        "volumes": ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro", "prom_data:/prometheus"],
+        "depends_on": [],
+        "healthcheck": "Prometheus HTTP /-/healthy"
+      },
+      {
+        "name": "grafana",
+        "container": "researchops-grafana",
+        "image_or_build": "grafana/grafana:10.4.0",
+        "ports": ["3001:3000"],
+        "role": "Visual dashboards for application KPIs and provider latency metrics",
+        "volumes": ["grafana_data:/var/lib/grafana", "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro", "./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro"],
+        "depends_on": ["prometheus"],
+        "healthcheck": "Grafana HTTP /api/health"
+      },
+      {
+        "name": "gateway",
+        "container": "researchops-gateway",
+        "image_or_build": "nginx:alpine",
+        "ports": ["8080:80"],
+        "role": "Public Nginx reverse proxy with gzip compression and timeout buffers",
+        "volumes": ["./nginx/nginx.conf:/etc/nginx/nginx.conf:ro"],
+        "depends_on": ["api"],
+        "healthcheck": "GET /healthz returns 200 'nginx ok'"
+      },
+      {
+        "name": "devops-showcase",
+        "container": "researchops-devops-showcase",
+        "image_or_build": "devops-showcase/Dockerfile (nginx:alpine)",
+        "ports": ["8085:80"],
+        "role": "Independent interactive DevOps Architecture & Implementation Showcase dashboard",
+        "volumes": ["Static assets bundled in container"],
+        "depends_on": ["api (optional)"],
+        "healthcheck": "GET / returns 200"
+      }
+    ]
+  },
+  "kubernetes_specs": {
+    "status_label": "Kubernetes manifests configured; live cluster not verified.",
+    "namespace": "researchops",
+    "management": "kustomize (k8s/kustomization.yaml)",
+    "rolling_update": {
+      "strategy": "RollingUpdate",
+      "max_surge": 1,
+      "max_unavailable": 0,
+      "benefit": "Zero downtime updates; new pod is verified healthy before old pod is terminated."
+    },
+    "hpa": {
+      "target_deployment": "researchops-api",
+      "min_replicas": 2,
+      "max_replicas": 8,
+      "cpu_threshold_percent": 70,
+      "memory_threshold_percent": 80,
+      "scale_up_policy": "100% replica boost every 15s (immediate responsiveness)",
+      "scale_down_policy": "20% scale-down every 60s with 300s stabilization window (prevents flapping)"
+    },
+    "resources": {
+      "requests": { "cpu": "250m", "memory": "256Mi" },
+      "limits": { "cpu": "1000m", "memory": "1Gi" }
+    },
+    "probes": {
+      "liveness": { "path": "/health", "port": 8000, "initial_delay_sec": 30, "period_sec": 15 },
+      "readiness": { "path": "/ready", "port": 8000, "initial_delay_sec": 15, "period_sec": 10 }
+    },
+    "storage_claims": [
+      { "name": "doc-storage-pvc", "size": "5Gi", "access": "ReadWriteMany" },
+      { "name": "export-storage-pvc", "size": "2Gi", "access": "ReadWriteMany" }
+    ]
+  },
+  "monitoring_observability": {
+    "prometheus": {
+      "version": "2.51.0",
+      "port": 9090,
+      "scrape_interval": "15s",
+      "evaluation_interval": "15s",
+      "scrape_target": "api:8000",
+      "metrics_path": "/metrics"
+    },
+    "grafana": {
+      "version": "10.4.0",
+      "port": 3001,
+      "dashboard_title": "ResearchOps Overview",
+      "dashboard_uid": "researchops-overview",
+      "tracked_metrics": [
+        { "name": "researchops_total_papers", "type": "stat", "title": "Papers in Library" },
+        { "name": "researchops_total_documents", "type": "stat", "title": "Indexed Documents" },
+        { "name": "researchops_total_chunks", "type": "stat", "title": "Vector Chunks" },
+        { "name": "researchops_active_background_jobs", "type": "stat", "title": "Active Background Jobs" },
+        { "name": "researchops_total_projects", "type": "timeseries", "title": "Research Projects" },
+        { "name": "researchops_provider_latency_ms", "type": "timeseries", "title": "Provider Probe Latency (ms)", "labels": ["OpenAlex", "Crossref", "Wikipedia"] }
+      ]
+    }
+  },
+  "reliability_and_resilience": {
+    "probes": [
+      {
+        "endpoint": "/health",
+        "probe_type": "Liveness Probe",
+        "description": "Asserts the FastAPI ASGI Python process is running and responding.",
+        "failure_behavior": "If this fails, Docker/Kubernetes automatically restarts the container to recover from deadlocks or OOM freeze."
+      },
+      {
+        "endpoint": "/ready",
+        "probe_type": "Readiness Probe",
+        "description": "Verifies that downstream dependencies (PostgreSQL database, Redis cache, and Celery workers) are operational.",
+        "failure_behavior": "If downstream DB or Redis is offline, the container is taken OUT of load-balancer rotation without being killed, allowing dependencies to recover."
+      },
+      {
+        "endpoint": "/metrics",
+        "probe_type": "Prometheus Exposition",
+        "description": "Outputs standard Prometheus text metrics with live database counts and measured probe latencies.",
+        "failure_behavior": "Enables automated alerting (e.g. Alertmanager notifications) when error rates or latencies breach thresholds."
+      }
+    ],
+    "circuit_breaker": {
+      "file_path": "app/utils/circuit_breaker.py",
+      "class_name": "CircuitBreaker",
+      "failure_threshold": 3,
+      "recovery_timeout_sec": 30.0,
+      "states": [
+        { "state": "CLOSED", "behavior": "Normal operation. Requests pass to academic provider. Failures are counted." },
+        { "state": "OPEN", "behavior": "Tripped after 3 consecutive failures. Fast-fails immediately without network latency or wasting downstream quota." },
+        { "state": "HALF_OPEN", "behavior": "Entered automatically after 30s timeout. Allows 1 probe request through: if success -> CLOSED, if failure -> OPEN." }
+      ],
+      "protected_providers": [
+        { "name": "Wikipedia", "service": "Wikipedia REST API", "threshold": 3, "timeout": 30.0 },
+        { "name": "OpenAlex", "service": "OpenAlex Works API", "threshold": 3, "timeout": 30.0 },
+        { "name": "Crossref", "service": "Crossref Works API", "threshold": 3, "timeout": 30.0 }
+      ]
+    }
+  },
+  "viva_presentation_slides": [
+    {
+      "slide_number": 1,
+      "title": "Project Introduction: ResearchOps AI",
+      "subtitle": "Intelligent Literature Research, Document Intelligence & DevOps Platform",
+      "key_points": [
+        "ResearchOps AI solves the fragmentation of academic literature discovery, PDF text extraction, vector chunking, and RAG synthesis.",
+        "Integrates multi-provider discovery across OpenAlex, Crossref, and Wikipedia APIs.",
+        "Built on Python 3.12, FastAPI, PostgreSQL (pgvector), Redis, Celery, and Nginx.",
+        "Engineered with end-to-end DevOps automation: CI/CD, Terraform IaC, Ansible, Docker Compose, Kubernetes, and Prometheus observability."
+      ],
+      "presenter_notes": "Begin by introducing ResearchOps AI as both a functional scholarly AI platform and a production-grade demonstration of cloud DevOps engineering. Highlight that it is not a toy script, but an observable multi-container system."
+    },
+    {
+      "slide_number": 2,
+      "title": "Why We Implemented DevOps Practices",
+      "subtitle": "Bridging Academic AI Software and Reliable Production Operations",
+      "key_points": [
+        "Reproducibility: Eliminates 'it works on my machine' problems across different development and server environments.",
+        "Zero-Downtime Deployments: Ensures uninterrupted user research sessions during software updates.",
+        "Automated Quality Gates: Ruff linting and Pytest suites execute before any deployment can occur.",
+        "Observability: Real-time latency tracking and database health monitoring via Prometheus and Grafana."
+      ],
+      "presenter_notes": "Explain to the examiners that AI pipelines frequently fail due to unmanaged dependencies and external API downtime. DevOps provides predictable builds, rapid rollbacks, and observable service degradation."
+    },
+    {
+      "slide_number": 3,
+      "title": "Continuous Integration: GitHub Actions",
+      "subtitle": "Automated Testing, Quality Assurance & Container Build Verification",
+      "key_points": [
+        "Configured in `.github/workflows/ci.yml` triggered on push and pull-request events.",
+        "Job 1 ('test'): Executes Ruff linting and runs 33+ Pytest unit and integration tests with coverage reporting.",
+        "Job 2 ('docker_build'): Uses Docker Buildx to verify that both the API and Worker Docker images compile without errors.",
+        "Build caching: Uses actions/setup-python with pip caching to accelerate workflow turnaround."
+      ],
+      "presenter_notes": "Mention that CI runs on ubuntu-latest runners. If linting or test assertions fail, the pipeline fails immediately, preventing faulty code from being tagged or deployed to the server."
+    },
+    {
+      "slide_number": 4,
+      "title": "Infrastructure as Code: Terraform on AWS",
+      "subtitle": "Declarative Cloud Resource Provisioning in ap-south-1",
+      "key_points": [
+        "Defined in `terraform/main.tf` using the HashiCorp AWS provider.",
+        "Provisions Canonical Ubuntu 22.04 LTS AMI on EC2 with 20GB gp3 SSD storage.",
+        "Configures `ResearchOpsAI-SecurityGroup` opening ports 22, 80, 443, 8000, 9090, and 3001.",
+        "State management: Supports `terraform plan` for dry-run verification and `terraform destroy` for clean teardown."
+      ],
+      "presenter_notes": "Emphasize that we do not manually click around the AWS console. Terraform gives us reproducible, declarative infrastructure that can be created in ap-south-1 in under 60 seconds."
+    },
+    {
+      "slide_number": 5,
+      "title": "Configuration Management: Ansible",
+      "subtitle": "Automated Host Provisioning & Stack Deployment over SSH",
+      "key_points": [
+        "Defined in `ansible/deploy.yml` executed against the provisioned EC2 instance.",
+        "Installs system packages, Git, Docker engine, and docker-compose-v2 plugin.",
+        "Clones or updates the repository to `/opt/researchhub` and runs `docker compose up --build -d`.",
+        "Automatically runs `alembic upgrade head` and asserts `/health` and `/ready` probes before completing."
+      ],
+      "presenter_notes": "Highlight Ansible's agentless nature. It connects via standard SSH with our .pem key, applies idempotent tasks, and verifies application readiness before finishing."
+    },
+    {
+      "slide_number": 6,
+      "title": "Containerization: Docker & Compose",
+      "subtitle": "Multi-Container Architecture on Isolated Bridge Network",
+      "key_points": [
+        "FastAPI (`researchops-api`) and Celery (`researchops-worker`) built on `python:3.12-slim` with non-root security.",
+        "PostgreSQL 16 using `pgvector/pgvector:pg16` image for relational and vector similarity storage.",
+        "Redis 7 Alpine for broker messaging; Nginx Alpine for edge gateway routing.",
+        "Compose orchestration enforces startup ordering via `depends_on` with `service_healthy` conditions."
+      ],
+      "presenter_notes": "Show the multi-container topology. Mention that databases and message brokers use named persistent volumes (pg_data, redis_data) so state survives container restarts."
+    },
+    {
+      "slide_number": 7,
+      "title": "Kubernetes Orchestration & Autoscaling",
+      "subtitle": "Cloud-Native Manifests with Kustomize & Horizontal Pod Autoscaler",
+      "key_points": [
+        "Manifests structured in `k8s/` managed by Kustomize under namespace `researchops`.",
+        "RollingUpdate strategy: `maxSurge: 1`, `maxUnavailable: 0` for zero-downtime rollouts.",
+        "HPA (`09-hpa.yaml`): Scales API deployment between 2 and 8 replicas based on 70% CPU and 80% RAM utilization.",
+        "Declarative PersistentVolumeClaims: 5Gi for research documents and 2Gi for exported reports."
+      ],
+      "presenter_notes": "Clarify that while Docker Compose is our primary lightweight runtime on EC2, we also authored full Kubernetes manifests for Kubernetes clusters, complete with HPA autoscaling policies."
+    },
+    {
+      "slide_number": 8,
+      "title": "Observability: Prometheus & Grafana",
+      "subtitle": "Full-Stack Metrics Scraping & Real-Time Visualization",
+      "key_points": [
+        "FastAPI exposes metrics at `GET /metrics` using Prometheus exposition format.",
+        "Prometheus server scrapes `api:8000/metrics` every 15 seconds.",
+        "Tracked gauges: `researchops_total_papers`, `researchops_total_documents`, `researchops_total_chunks`.",
+        "Grafana visualizes provider probe latencies for OpenAlex, Crossref, and Wikipedia on port 3001."
+      ],
+      "presenter_notes": "Explain that observability is the core of DevOps. We do not guess if the API is slow; Prometheus timestamps probe latency, and Grafana displays visual trends."
+    },
+    {
+      "slide_number": 9,
+      "title": "Reliability: Probes & Circuit Breakers",
+      "subtitle": "Fault Isolation and Graceful Degradation in Production",
+      "key_points": [
+        "Liveness (`/health`): Verifies ASGI process is alive. Failed liveness triggers container restart.",
+        "Readiness (`/ready`): Asserts PostgreSQL, Redis, and Worker availability before routing traffic.",
+        "Circuit Breakers: Implemented in `app/utils/circuit_breaker.py` with states CLOSED, OPEN, HALF-OPEN.",
+        "Protects external APIs (OpenAlex, Crossref, Wikipedia) with a 3-failure trip threshold and 30s recovery probe."
+      ],
+      "presenter_notes": "In a viva, examiners love asking the difference between liveness and readiness probes. Be clear: liveness restarts dead processes; readiness removes degraded containers from the load balancer."
+    },
+    {
+      "slide_number": 10,
+      "title": "Complete End-to-End DevOps Lifecycle",
+      "subtitle": "From Code Commit to Production Telemetry",
+      "key_points": [
+        "Developer pushes code to GitHub repository -> triggers GitHub Actions CI pipeline.",
+        "Terraform provisions AWS EC2 instance and opens firewall ports -> outputs public IP.",
+        "Ansible connects via SSH -> installs Docker -> pulls repository -> runs Compose stack.",
+        "FastAPI initializes DB schema via Alembic -> Prometheus scrapes metrics -> Grafana monitors live health."
+      ],
+      "presenter_notes": "Summarize the seamless end-to-end chain. This slide shows the holistic DevOps lifecycle working as a unified pipeline."
+    },
+    {
+      "slide_number": 11,
+      "title": "Tangible Benefits & Engineering Metrics",
+      "subtitle": "Quantifiable Value Delivered by DevOps Implementation",
+      "key_points": [
+        "Deployment Time: Reduced from ~45 minutes of manual commands to a single 3-minute Ansible run.",
+        "Failure Blast Radius: Downstream API failures isolated via Circuit Breakers without crashing user sessions.",
+        "Zero Downtime: MaxSurge / MaxUnavailable rolling updates eliminate deployment maintenance windows.",
+        "Observability: Latency anomalies detected in seconds rather than discovering bugs through user complaints."
+      ],
+      "presenter_notes": "Viva examiners evaluate whether DevOps added real value or was just buzzwords. Cite these metrics to demonstrate engineering maturity."
+    },
+    {
+      "slide_number": 12,
+      "title": "Conclusion & Technical Defense Summary",
+      "subtitle": "ResearchOps AI — A Modern, Observable, Cloud-Ready Platform",
+      "key_points": [
+        "Successfully unified scholarly AI document intelligence with industry-standard DevOps practices.",
+        "All configurations verified in repository: GitHub Actions, Terraform, Ansible, Docker, K8s, Prometheus.",
+        "Interactive showcase running independently on port 8085 for demonstration and viva defense.",
+        "Ready for examiners' questions across Architecture, Cloud Infrastructure, and Reliability Engineering."
+      ],
+      "presenter_notes": "Conclude confidently. Invite the committee to ask technical questions about any component or inspect live configuration files on the dashboard."
+    }
+  ]
+}

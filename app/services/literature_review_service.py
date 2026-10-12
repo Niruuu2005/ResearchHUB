@@ -20,6 +20,7 @@ class LiteratureReviewService:
         paper_ids: Optional[List[int]] = None,
         topic: Optional[str] = None,
         citation_style: str = "IEEE",
+        user_id: Optional[str] = None,
     ) -> LiteratureReviewOut:
         papers: List[Paper] = []
         resolved_project_id: Optional[int] = None
@@ -28,41 +29,51 @@ class LiteratureReviewService:
         # Prefer explicit paper_ids when provided; otherwise project; otherwise recent library papers.
         if paper_ids:
             requested = list(dict.fromkeys(paper_ids))  # preserve order, dedupe
-            found = {
-                p.id: p
-                for p in db.query(Paper).filter(Paper.id.in_(requested)).all()
-            }
+            query = db.query(Paper).filter(Paper.id.in_(requested))
+            if user_id is not None:
+                query = query.filter(Paper.user_id == str(user_id))
+            found = {p.id: p for p in query.all()}
             missing = [pid for pid in requested if pid not in found]
             if missing:
                 raise ValueError(f"Paper ID(s) not found in library: {missing}")
             papers = [found[pid] for pid in requested]
             if project_id:
-                project = db.query(ResearchProject).filter(ResearchProject.id == project_id).first()
+                proj_q = db.query(ResearchProject).filter(ResearchProject.id == project_id)
+                if user_id is not None:
+                    proj_q = proj_q.filter(ResearchProject.user_id == str(user_id))
+                project = proj_q.first()
                 if not project:
                     raise ValueError(f"Project with ID {project_id} not found.")
                 resolved_project_id = project.id
                 if not topic:
                     project_name = project.name
         elif project_id is not None:
-            project = db.query(ResearchProject).filter(ResearchProject.id == project_id).first()
+            proj_q = db.query(ResearchProject).filter(ResearchProject.id == project_id)
+            if user_id is not None:
+                proj_q = proj_q.filter(ResearchProject.user_id == str(user_id))
+            project = proj_q.first()
             if not project:
                 raise ValueError(f"Project with ID {project_id} not found.")
             resolved_project_id = project.id
             if not topic:
                 project_name = project.name
-            papers = (
+            papers_q = (
                 db.query(Paper)
                 .join(ProjectPaper, ProjectPaper.paper_id == Paper.id)
                 .filter(ProjectPaper.project_id == project_id)
-                .order_by(Paper.created_at.desc())
-                .all()
             )
+            if user_id is not None:
+                papers_q = papers_q.filter(Paper.user_id == str(user_id))
+            papers = papers_q.order_by(Paper.created_at.desc()).all()
             if not papers:
                 raise ValueError(
                     f"Project '{project.name}' has no papers. Add papers to the workspace before generating a review."
                 )
         else:
-            papers = db.query(Paper).order_by(Paper.created_at.desc()).limit(10).all()
+            papers_q = db.query(Paper)
+            if user_id is not None:
+                papers_q = papers_q.filter(Paper.user_id == str(user_id))
+            papers = papers_q.order_by(Paper.created_at.desc()).limit(10).all()
             if not papers:
                 raise ValueError(
                     "No papers available to construct a literature review. Save papers to your library first."

@@ -3,8 +3,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.db.session import get_db
-from app.models.database import ChatMessage, ChatSession, Paper, ResearchProject
+from app.models.database import ChatMessage, ChatSession, Paper, ResearchProject, User
 from app.models.schemas import ChatMessageOut, ChatQueryRequest, ChatResponse, CitationItem
 from app.services.llm_service import LLMService
 from app.services.operations_service import OperationsService
@@ -16,13 +17,24 @@ llm_service = LLMService()
 
 
 def _get_or_create_session(
-    db: Session, session_id: Optional[int], scope_type: str, scope_id: Optional[int], default_title: str
+    db: Session,
+    session_id: Optional[int],
+    scope_type: str,
+    scope_id: Optional[int],
+    default_title: str,
+    user_id: str,
 ) -> ChatSession:
     if session_id:
-        session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+        session = (
+            db.query(ChatSession)
+            .filter(ChatSession.id == session_id, ChatSession.user_id == user_id)
+            .first()
+        )
         if session:
             return session
+
     session = ChatSession(
+        user_id=user_id,
         scope_type=scope_type,
         scope_id=scope_id,
         title=default_title[:200],
@@ -37,25 +49,31 @@ def _get_or_create_session(
 async def chat_with_paper(
     paper_id: int,
     payload: ChatQueryRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Ask a question about a single paper and receive grounded answer with exact page/section citations."""
-    paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    paper = (
+        db.query(Paper)
+        .filter(Paper.id == paper_id, Paper.user_id == current_user.id)
+        .first()
+    )
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found.")
 
     await _ensure_paper_abstract(db, paper)
 
     session = _get_or_create_session(
-        db, payload.session_id, "paper", paper_id, f"Chat: {paper.title}"
+        db, payload.session_id, "paper", paper_id, f"Chat: {paper.title}", str(current_user.id)
     )
 
-    # 1. Retrieve top relevant chunks for this paper
+    # 1. Retrieve top relevant chunks scoped to this paper and user
     citations = retrieval_service.retrieve(
         db=db,
         query=payload.question,
         paper_ids=[paper_id],
         top_k=4,
+        user_id=current_user.id,
     )
 
     # 2. Generate grounded answer
@@ -108,7 +126,6 @@ async def _ensure_paper_abstract(db: Session, paper: Paper) -> None:
             elif fetched is None:
                 fetched = cr_paper
 
-        # Same title often has an OA abstract on another DOI (e.g. Zenodo mirror)
         if (not fetched or not (fetched.abstract or "").strip()) and paper.title:
             for candidate in await oa.search_papers(paper.title[:90]):
                 if (candidate.abstract or "").strip():
@@ -131,15 +148,20 @@ async def _ensure_paper_abstract(db: Session, paper: Paper) -> None:
 async def chat_with_project(
     project_id: int,
     payload: ChatQueryRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Ask questions across all papers saved in a project workspace with cross-paper citations."""
-    project = db.query(ResearchProject).filter(ResearchProject.id == project_id).first()
+    """Ask questions across all papers saved in a user-owned project workspace with cross-paper citations."""
+    project = (
+        db.query(ResearchProject)
+        .filter(ResearchProject.id == project_id, ResearchProject.user_id == current_user.id)
+        .first()
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
     session = _get_or_create_session(
-        db, payload.session_id, "project", project_id, f"Project Chat: {project.name}"
+        db, payload.session_id, "project", project_id, f"Project Chat: {project.name}", str(current_user.id)
     )
 
     citations = retrieval_service.retrieve(
@@ -147,6 +169,7 @@ async def chat_with_project(
         query=payload.question,
         project_id=project_id,
         top_k=6,
+        user_id=current_user.id,
     )
 
     answer = await llm_service.answer_question(payload.question, citations)
@@ -173,11 +196,12 @@ async def chat_with_project(
 @router.post("/library", response_model=ChatResponse, summary="Chat with Entire Research Library")
 async def chat_with_library(
     payload: ChatQueryRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Ask questions across all saved papers in the user library."""
+    """Ask questions across all saved papers in the authenticated user's library with vector isolation."""
     session = _get_or_create_session(
-        db, payload.session_id, "library", None, "Library-wide Synthesis Chat"
+        db, payload.session_id, "library", None, "Library-wide Synthesis Chat", str(current_user.id)
     )
 
     citations = retrieval_service.retrieve(
@@ -185,6 +209,7 @@ async def chat_with_library(
         query=payload.question,
         paper_ids=payload.paper_ids,
         top_k=6,
+        user_id=current_user.id,
     )
 
     answer = await llm_service.answer_question(payload.question, citations)
@@ -209,13 +234,26 @@ async def chat_with_library(
 
 
 @router.get("/{session_id}/messages", response_model=List[ChatMessageOut], summary="Get Chat Session History")
-async def get_chat_messages(session_id: int, db: Session = Depends(get_db)):
-    """Retrieve full message history and citations for a chat session."""
-    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+async def get_chat_messages(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve message history and citations for a chat session owned by the authenticated user."""
+    session = (
+        db.query(ChatSession)
+        .filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
+        .first()
+    )
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found.")
 
-    msgs = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc()).all()
+    msgs = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.session_id == session_id)
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    )
     results = []
     for m in msgs:
         raw_cites = json.loads(m.citations_json or "[]")

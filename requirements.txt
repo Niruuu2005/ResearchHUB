@@ -14,5 +14,9 @@ redis>=5.0.0
 python-docx>=1.1.0
 reportlab>=4.0.0
 jinja2>=3.1.0
+pyjwt>=2.8.0
+cryptography>=42.0.0
+authlib>=1.3.0
 # Optional but recommended for real semantic RAG (EMBEDDING_PROVIDER=auto|sentence-transformers)
 sentence-transformers>=3.0.0
+

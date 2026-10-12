@@ -195,22 +195,31 @@ class OperationsService:
 
     @staticmethod
     def record_audit(
-        db: Session, action: str, entity_type: str, entity_id: Optional[str] = None, details: Optional[str] = None
+        db: Session,
+        action: str,
+        entity_type: str,
+        entity_id: Optional[str] = None,
+        details: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> AuditEvent:
+        event_details = f"[user:{user_id}] {details}" if user_id and details else details
         event = AuditEvent(
             action=action,
             entity_type=entity_type,
             entity_id=str(entity_id) if entity_id else None,
-            details=details,
+            details=event_details,
         )
         db.add(event)
         db.commit()
         return event
 
     @staticmethod
-    def record_job(db: Session, job_id: str, job_type: str, payload: dict) -> BackgroundJob:
+    def record_job(
+        db: Session, job_id: str, job_type: str, payload: dict, user_id: Optional[str] = None
+    ) -> BackgroundJob:
         job = BackgroundJob(
             id=job_id,
+            user_id=str(user_id) if user_id else None,
             job_type=job_type,
             status="queued",
             progress=0,

@@ -31,20 +31,30 @@ class ExportService:
         citation_style: str = "IEEE",
         project_id: Optional[int] = None,
         paper_ids: Optional[List[int]] = None,
+        user_id: Optional[str] = None,
     ) -> ExportReport:
         format_clean = format_type.lower().strip()
         timestamp_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         safe_title = "".join([c if c.isalnum() else "_" for c in title])[:40]
         filename = f"{safe_title}_{timestamp_str}.{format_clean}"
-        file_path = self.export_dir / filename
+        
+        if user_id:
+            user_export_dir = self.export_dir / str(user_id)
+            user_export_dir.mkdir(parents=True, exist_ok=True)
+            file_path = user_export_dir / filename
+        else:
+            file_path = self.export_dir / filename
 
-        # Fetch literature review or structured content
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Fetch literature review or structured content scoped to user
         review = self.lit_review_service.build_literature_review(
             db=db,
             project_id=project_id,
             paper_ids=paper_ids,
             topic=title,
             citation_style=citation_style,
+            user_id=user_id,
         )
 
         if format_clean == "pdf":
@@ -56,7 +66,7 @@ class ExportService:
         elif format_clean == "json":
             self._write_json(file_path, review)
         elif format_clean == "bibtex":
-            self._write_bibtex(db, file_path, paper_ids, project_id, citation_style)
+            self._write_bibtex(db, file_path, paper_ids, project_id, citation_style, user_id=user_id)
         else:
             # Default to Markdown
             self._write_markdown(file_path, review)
@@ -64,6 +74,7 @@ class ExportService:
         file_size = os.path.getsize(file_path) if file_path.exists() else 0
 
         report_record = ExportReport(
+            user_id=str(user_id) if user_id else None,
             title=title,
             report_type=report_type,
             format=format_clean,
@@ -106,20 +117,27 @@ class ExportService:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
-    def _write_bibtex(self, db: Session, path: Path, paper_ids, project_id, citation_style) -> None:
+    def _write_bibtex(
+        self, db: Session, path: Path, paper_ids, project_id, citation_style, user_id: Optional[str] = None
+    ) -> None:
         if not paper_ids and project_id:
-            papers = (
+            pq = (
                 db.query(Paper)
                 .join(ProjectPaper, ProjectPaper.paper_id == Paper.id)
                 .filter(ProjectPaper.project_id == project_id)
-                .all()
             )
+            if user_id:
+                pq = pq.filter(Paper.user_id == str(user_id))
+            papers = pq.all()
             paper_ids = [p.id for p in papers]
         elif not paper_ids:
-            papers = db.query(Paper).limit(10).all()
+            pq = db.query(Paper)
+            if user_id:
+                pq = pq.filter(Paper.user_id == str(user_id))
+            papers = pq.limit(10).all()
             paper_ids = [p.id for p in papers]
 
-        export = CitationService.export_bulk_citations(db, paper_ids, citation_style)
+        export = CitationService.export_bulk_citations(db, paper_ids, citation_style, user_id=user_id)
         with open(path, "w", encoding="utf-8") as f:
             f.write(export.bibtex)
 

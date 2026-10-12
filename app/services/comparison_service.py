@@ -17,22 +17,23 @@ class ComparisonService:
     def __init__(self, summary_service: Optional[SummaryService] = None):
         self.summary_service = summary_service or SummaryService()
 
-    def compare_papers(self, db: Session, paper_ids: List[int]) -> ComparisonResponse:
+    def compare_papers(self, db: Session, paper_ids: List[int], user_id: Optional[str] = None) -> ComparisonResponse:
         if len(paper_ids) < 2 or len(paper_ids) > 5:
             raise ValueError("Comparison requires between 2 and 5 papers.")
 
         # Preserve request order
         ordered_ids = list(dict.fromkeys(paper_ids))
-        papers_by_id = {
-            p.id: p for p in db.query(Paper).filter(Paper.id.in_(ordered_ids)).all()
-        }
+        query = db.query(Paper).filter(Paper.id.in_(ordered_ids))
+        if user_id is not None:
+            query = query.filter(Paper.user_id == str(user_id))
+        papers_by_id = {p.id: p for p in query.all()}
         papers = [papers_by_id[i] for i in ordered_ids if i in papers_by_id]
         if len(papers) < 2:
-            raise ValueError("At least 2 valid papers must be found in the database.")
+            raise ValueError("At least 2 valid papers owned by you must be selected for comparison.")
 
         columns: List[PaperComparisonColumn] = []
         for p in papers:
-            s = self.summary_service.summarize_paper(db, p.id)
+            s = self.summary_service.summarize_paper(db, p.id, user_id=user_id)
             columns.append(
                 PaperComparisonColumn(
                     paper_id=p.id,

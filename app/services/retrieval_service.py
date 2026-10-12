@@ -27,11 +27,15 @@ class RetrievalService:
         paper_ids: Optional[List[int]] = None,
         project_id: Optional[int] = None,
         top_k: int = 5,
+        user_id: Optional[str] = None,
     ) -> List[CitationItem]:
-        """Perform semantic vector retrieval over indexed paper chunks."""
+        """Perform semantic vector retrieval over indexed paper chunks scoped to the user."""
         query_vec = self.embedding_service.embed_text(query)
 
         chunk_query = db.query(PaperChunk, Paper).join(Paper, Paper.id == PaperChunk.paper_id)
+
+        if user_id is not None:
+            chunk_query = chunk_query.filter(Paper.user_id == str(user_id))
 
         if project_id:
             chunk_query = chunk_query.join(ProjectPaper, ProjectPaper.paper_id == Paper.id).filter(
@@ -42,7 +46,7 @@ class RetrievalService:
 
         chunks_with_papers = chunk_query.all()
         if not chunks_with_papers:
-            return self._fallback_metadata_search(db, query, paper_ids, project_id, top_k)
+            return self._fallback_metadata_search(db, query, paper_ids, project_id, top_k, user_id=user_id)
 
         scored = []
         for chunk, paper in chunks_with_papers:
@@ -74,7 +78,7 @@ class RetrievalService:
 
         # If vector hits are weak / empty, still surface abstracts for scoped papers
         if not results:
-            return self._fallback_metadata_search(db, query, paper_ids, project_id, top_k)
+            return self._fallback_metadata_search(db, query, paper_ids, project_id, top_k, user_id=user_id)
 
         return results
 
@@ -85,9 +89,12 @@ class RetrievalService:
         paper_ids: Optional[List[int]],
         project_id: Optional[int],
         top_k: int,
+        user_id: Optional[str] = None,
     ) -> List[CitationItem]:
         """Fallback when PDFs have not yet been uploaded/indexed — use abstracts/titles."""
         pq = db.query(Paper)
+        if user_id is not None:
+            pq = pq.filter(Paper.user_id == str(user_id))
         if project_id:
             pq = pq.join(ProjectPaper, ProjectPaper.paper_id == Paper.id).filter(
                 ProjectPaper.project_id == project_id

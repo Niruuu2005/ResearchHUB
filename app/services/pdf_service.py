@@ -30,6 +30,7 @@ class PDFService:
         paper_id: int,
         filename: str,
         content: bytes,
+        user_id: Optional[str] = None,
     ) -> PaperDocument:
         """Validate and persist uploaded PDF file, then schedule/execute text processing."""
         # 1. Validation
@@ -41,8 +42,18 @@ class PDFService:
 
         safe_name = sanitize_filename(filename)
         checksum = compute_sha256(content)
-        storage_key = f"paper_{paper_id}_{checksum[:8]}_{safe_name}"
+        
+        # User-isolated storage path
+        if user_id:
+            user_subfolder = self.storage_dir / str(user_id)
+            user_subfolder.mkdir(parents=True, exist_ok=True)
+            storage_key = f"{user_id}/paper_{paper_id}_{checksum[:8]}_{safe_name}"
+        else:
+            storage_key = f"paper_{paper_id}_{checksum[:8]}_{safe_name}"
+
         file_path = self.storage_dir / storage_key
+        # Ensure parent directories exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(file_path, "wb") as f:
             f.write(content)
@@ -52,6 +63,7 @@ class PDFService:
         if not document:
             document = PaperDocument(
                 paper_id=paper_id,
+                user_id=str(user_id) if user_id else None,
                 storage_key=storage_key,
                 file_name=safe_name,
                 file_size=len(content),
@@ -67,14 +79,16 @@ class PDFService:
             document.checksum = checksum
             document.processing_status = "processing"
             document.error_message = None
+            if user_id:
+                document.user_id = str(user_id)
 
         db.commit()
         db.refresh(document)
 
-        self._schedule_or_process(db, document.id)
+        self._schedule_or_process(db, document.id, user_id=str(user_id) if user_id else None)
         return document
 
-    def _schedule_or_process(self, db: Session, document_id: int) -> None:
+    def _schedule_or_process(self, db: Session, document_id: int, user_id: Optional[str] = None) -> None:
         """Dispatch PDF processing to Celery when enabled; otherwise run in-process."""
         import os
         import uuid
@@ -87,16 +101,19 @@ class PDFService:
 
                 job_id = str(uuid.uuid4())
                 OperationsService.record_job(
-                    db, job_id, "process_pdf", {"document_id": document_id}
+                    db, job_id, "process_pdf", {"document_id": document_id}, user_id=user_id
                 )
-                process_pdf_document_task.delay(document_id, job_id)
+                process_pdf_document_task.delay(document_id, job_id, user_id)
                 logger.info(f"Queued Celery PDF job {job_id} for document {document_id}")
                 return
             except Exception as exc:
                 logger.warning(f"Celery dispatch failed ({exc}); processing PDF in-process.")
 
         self.process_document_text(db, document_id)
-    async def fetch_open_access_pdf(self, db: Session, paper_id: int, pdf_url: str) -> PaperDocument:
+
+    async def fetch_open_access_pdf(
+        self, db: Session, paper_id: int, pdf_url: str, user_id: Optional[str] = None
+    ) -> PaperDocument:
         """Download open-access PDF from remote source and process it."""
         logger.info(f"Downloading Open-Access PDF for paper {paper_id} from {pdf_url}")
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
@@ -110,7 +127,7 @@ class PDFService:
             if not filename.endswith(".pdf"):
                 filename = f"paper_{paper_id}.pdf"
 
-            return self.save_uploaded_pdf(db, paper_id, filename, content)
+            return self.save_uploaded_pdf(db, paper_id, filename, content, user_id=user_id)
 
     def extract_pages(self, file_path: Path) -> List[Tuple[int, str]]:
         """Extract text per page using PyMuPDF (fitz) or pypdf fallback."""

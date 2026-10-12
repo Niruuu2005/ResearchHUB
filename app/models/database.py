@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from sqlalchemy import (
     Boolean,
     Column,
@@ -9,15 +10,67 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.types import CHAR, TypeDecorator
 
 Base = declarative_base()
+
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID/UUID type.
+
+    Uses PostgreSQL native UUID type when on PostgreSQL;
+    otherwise CHAR(36) string format on SQLite and other dialects.
+    Accepts both uuid.UUID instances and string representations.
+    """
+
+    impl = CHAR(36)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=False))
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
+
+class User(Base):
+    """Primary user identity table for Google OAuth authenticated researchers."""
+
+    __tablename__ = "users"
+
+    id = Column(GUID(), primary_key=True, default=lambda: str(uuid.uuid4()))
+    google_sub = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(320), nullable=False, index=True)
+    full_name = Column(String(255), nullable=True)
+    profile_picture = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    last_login_at = Column(DateTime, nullable=True)
+
+    projects = relationship("ResearchProject", back_populates="user", cascade="all, delete-orphan")
+    papers = relationship("Paper", back_populates="user", cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
+    notes = relationship("ResearchNote", back_populates="user", cascade="all, delete-orphan")
+    reports = relationship("ExportReport", back_populates="user", cascade="all, delete-orphan")
+    research_sessions = relationship("ResearchSession", back_populates="user", cascade="all, delete-orphan")
 
 
 class ResearchProject(Base):
     __tablename__ = "research_projects"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     name = Column(String(200), nullable=False, index=True)
     description = Column(Text, default="")
     objective = Column(Text, default="")
@@ -25,6 +78,7 @@ class ResearchProject(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="projects")
     papers = relationship("ProjectPaper", back_populates="project", cascade="all, delete-orphan")
     notes = relationship("ResearchNote", back_populates="project", cascade="all, delete-orphan")
 
@@ -33,6 +87,7 @@ class ResearchSession(Base):
     __tablename__ = "research_sessions"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     topic = Column(String(300), nullable=False, index=True)
     year_from = Column(Integer, nullable=True)
     year_to = Column(Integer, nullable=True)
@@ -42,11 +97,14 @@ class ResearchSession(Base):
     warnings_json = Column(Text, default="[]")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="research_sessions")
+
 
 class Paper(Base):
     __tablename__ = "papers"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     title = Column(String(500), nullable=False, index=True)
     abstract = Column(Text, nullable=True)
     doi = Column(String(250), nullable=True, index=True)
@@ -60,6 +118,7 @@ class Paper(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="papers")
     authors = relationship("PaperAuthor", back_populates="paper", cascade="all, delete-orphan")
     projects = relationship("ProjectPaper", back_populates="paper", cascade="all, delete-orphan")
     documents = relationship("PaperDocument", back_populates="paper", cascade="all, delete-orphan")
@@ -96,6 +155,7 @@ class PaperDocument(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     paper_id = Column(Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     storage_key = Column(String(500), nullable=False)
     file_name = Column(String(300), nullable=False)
     file_size = Column(Integer, default=0)
@@ -155,12 +215,14 @@ class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     scope_type = Column(String(50), default="library")  # paper, project, library
     scope_id = Column(Integer, nullable=True)
     title = Column(String(300), default="Research Conversation")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="chat_sessions")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 
@@ -181,6 +243,7 @@ class ResearchNote(Base):
     __tablename__ = "research_notes"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     project_id = Column(Integer, ForeignKey("research_projects.id", ondelete="CASCADE"), nullable=True)
     paper_id = Column(Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=True)
     page_number = Column(Integer, nullable=True)
@@ -190,6 +253,7 @@ class ResearchNote(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="notes")
     project = relationship("ResearchProject", back_populates="notes")
     paper = relationship("Paper", back_populates="notes")
 
@@ -198,6 +262,7 @@ class ExportReport(Base):
     __tablename__ = "export_reports"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     title = Column(String(300), nullable=False)
     report_type = Column(String(100), nullable=False)  # research_report, literature_review, etc.
     format = Column(String(20), nullable=False)  # pdf, docx, md, json, bibtex
@@ -208,11 +273,14 @@ class ExportReport(Base):
     status = Column(String(50), default="completed")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="reports")
+
 
 class BackgroundJob(Base):
     __tablename__ = "background_jobs"
 
     id = Column(String(100), primary_key=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     job_type = Column(String(100), nullable=False)
     status = Column(String(50), default="queued")  # queued, running, completed, failed
     progress = Column(Integer, default=0)

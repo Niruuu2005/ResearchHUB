@@ -4,9 +4,10 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.config import settings
 from app.db.session import get_db
-from app.models.database import Paper, PaperChunk, PaperDocument
+from app.models.database import Paper, PaperChunk, PaperDocument, User
 from app.models.schemas import DocumentOut, ProcessingStatusOut
 from app.services.operations_service import OperationsService
 from app.services.pdf_service import PDFService
@@ -23,16 +24,23 @@ class FetchPDFRequest(BaseModel):
 async def upload_pdf(
     paper_id: int,
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Upload a research paper PDF for automated extraction and vector embedding."""
-    paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    """Upload a research paper PDF for automated extraction and vector embedding with user isolation."""
+    paper = (
+        db.query(Paper)
+        .filter(Paper.id == paper_id, Paper.user_id == current_user.id)
+        .first()
+    )
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found.")
 
     try:
         content = await file.read()
-        doc = pdf_service.save_uploaded_pdf(db, paper_id, file.filename or "paper.pdf", content)
+        doc = pdf_service.save_uploaded_pdf(
+            db, paper_id, file.filename or "paper.pdf", content, user_id=current_user.id
+        )
         OperationsService.record_audit(db, "pdf_uploaded", "paper_document", str(doc.id), doc.file_name)
         return doc
     except ValueError as val_err:
@@ -45,15 +53,22 @@ async def upload_pdf(
 async def fetch_open_access_pdf(
     paper_id: int,
     payload: FetchPDFRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Fetch an open-access PDF from a verified direct link and index it."""
-    paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    """Fetch an open-access PDF from a verified direct link and index it for the user."""
+    paper = (
+        db.query(Paper)
+        .filter(Paper.id == paper_id, Paper.user_id == current_user.id)
+        .first()
+    )
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found.")
 
     try:
-        doc = await pdf_service.fetch_open_access_pdf(db, paper_id, payload.pdf_url)
+        doc = await pdf_service.fetch_open_access_pdf(
+            db, paper_id, payload.pdf_url, user_id=current_user.id
+        )
         OperationsService.record_audit(db, "pdf_fetched", "paper_document", str(doc.id), payload.pdf_url)
         return doc
     except Exception as exc:
@@ -61,14 +76,34 @@ async def fetch_open_access_pdf(
 
 
 @router.get("/{paper_id}/pdf", summary="Serve Paper PDF")
-async def serve_pdf(paper_id: int, db: Session = Depends(get_db)):
-    """Serve the stored PDF binary file for embedded browser reader."""
+async def serve_pdf(
+    paper_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Serve the stored PDF binary file verifying ownership and preventing path traversal."""
+    paper = (
+        db.query(Paper)
+        .filter(Paper.id == paper_id, Paper.user_id == current_user.id)
+        .first()
+    )
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found.")
+
     doc = db.query(PaperDocument).filter(PaperDocument.paper_id == paper_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="No document found for this paper.")
 
-    file_path = Path(settings.storage_path) / doc.storage_key
-    if not file_path.exists():
+    storage_root = Path(settings.storage_path).resolve()
+    file_path = (storage_root / doc.storage_key).resolve()
+
+    # Prevent path traversal outside storage directory
+    try:
+        file_path.relative_to(storage_root)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    if not file_path.is_file():
         raise HTTPException(status_code=404, detail="PDF file missing from storage.")
 
     return FileResponse(
@@ -79,8 +114,20 @@ async def serve_pdf(paper_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{paper_id}/processing-status", response_model=ProcessingStatusOut, summary="Get Document Indexing Status")
-async def get_processing_status(paper_id: int, db: Session = Depends(get_db)):
-    """Check whether paper PDF is parsed, chunked, and embedded."""
+async def get_processing_status(
+    paper_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Check indexing status of an uploaded PDF owned by the authenticated user."""
+    paper = (
+        db.query(Paper)
+        .filter(Paper.id == paper_id, Paper.user_id == current_user.id)
+        .first()
+    )
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found.")
+
     doc = db.query(PaperDocument).filter(PaperDocument.paper_id == paper_id).first()
     if not doc:
         return ProcessingStatusOut(

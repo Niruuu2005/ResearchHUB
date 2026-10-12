@@ -2,8 +2,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.db.session import get_db
-from app.models.database import Paper
+from app.models.database import Paper, User
 from app.models.schemas import PaperOut, PaperSaveRequest
 from app.services.citation_service import CitationService
 from app.services.operations_service import OperationsService
@@ -18,10 +19,13 @@ async def list_papers(
     limit: int = Query(50, ge=1, le=1000),
     project_id: Optional[int] = None,
     search: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Retrieve saved academic papers from personal library with filtering."""
-    papers = PaperService.get_papers(db, skip=skip, limit=limit, project_id=project_id, search=search)
+    """Retrieve saved academic papers from authenticated user's private library with filtering."""
+    papers = PaperService.get_papers(
+        db, skip=skip, limit=limit, project_id=project_id, search=search, user_id=current_user.id
+    )
     results = []
     for p in papers:
         doc = p.documents[0] if p.documents else None
@@ -47,9 +51,13 @@ async def list_papers(
 
 
 @router.post("/save", response_model=PaperOut, status_code=status.HTTP_201_CREATED, summary="Save Paper")
-async def save_paper(payload: PaperSaveRequest, db: Session = Depends(get_db)):
-    """Save an academic paper to the library."""
-    paper = PaperService.save_paper(db, payload)
+async def save_paper(
+    payload: PaperSaveRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save an academic paper to authenticated user's private library."""
+    paper = PaperService.save_paper(db, payload, user_id=current_user.id)
     OperationsService.record_audit(db, "paper_saved", "paper", str(paper.id), paper.title)
     doc = paper.documents[0] if paper.documents else None
     return PaperOut(
@@ -71,9 +79,13 @@ async def save_paper(payload: PaperSaveRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/{paper_id}", summary="Get Paper Intelligence Details")
-async def get_paper(paper_id: int, db: Session = Depends(get_db)):
-    """Retrieve complete metadata and processing status for an academic paper."""
-    paper = PaperService.get_paper_by_id(db, paper_id)
+async def get_paper(
+    paper_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve complete metadata and processing status for an academic paper owned by the user."""
+    paper = PaperService.get_paper_by_id(db, paper_id, user_id=current_user.id)
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found.")
 
@@ -102,8 +114,13 @@ async def get_paper(paper_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{paper_id}", summary="Delete Paper")
-async def delete_paper(paper_id: int, db: Session = Depends(get_db)):
-    success = PaperService.delete_paper(db, paper_id)
+async def delete_paper(
+    paper_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a paper owned by the user from their library."""
+    success = PaperService.delete_paper(db, paper_id, user_id=current_user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Paper not found.")
     OperationsService.record_audit(db, "paper_deleted", "paper", str(paper_id))
@@ -111,8 +128,17 @@ async def delete_paper(paper_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{paper_id}/related", summary="Get Related Papers")
-async def get_related_papers(paper_id: int, db: Session = Depends(get_db)):
-    related = PaperService.get_related_papers(db, paper_id)
+async def get_related_papers(
+    paper_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Find related papers within authenticated user's library."""
+    paper = PaperService.get_paper_by_id(db, paper_id, user_id=current_user.id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found.")
+
+    related = PaperService.get_related_papers(db, paper_id, user_id=current_user.id)
     return [
         {
             "paper_id": item["paper"].id,
@@ -130,9 +156,15 @@ async def get_related_papers(paper_id: int, db: Session = Depends(get_db)):
 async def get_paper_citation(
     paper_id: int,
     style: str = Query("IEEE", pattern="^(IEEE|APA|MLA|Harvard)$"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    citations = CitationService.format_citations(db, [paper_id], style)
+    """Format citation for a paper owned by the authenticated user."""
+    paper = PaperService.get_paper_by_id(db, paper_id, user_id=current_user.id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found.")
+
+    citations = CitationService.format_citations(db, [paper_id], style, user_id=current_user.id)
     if not citations:
         raise HTTPException(status_code=404, detail="Paper not found.")
     return citations[0]

@@ -469,3 +469,32 @@ class AuditEventOut(BaseModel):
     entity_id: Optional[str] = None
     details: Optional[str] = None
     timestamp: datetime
+
+
+# ---------------------------------------------------------------------------
+# Authentication and User Schemas
+# ---------------------------------------------------------------------------
+
+class UserOut(BaseModel):
+    """Safe public user profile."""
+    id: str
+    email: str
+    full_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+    created_at: Optional[datetime] = None
+    last_login_at: Optional[datetime] = None
+
+
+class AuthStatusResponse(BaseModel):
+    """Current session authentication status."""
+    authenticated: bool
+    user: Optional[UserOut] = None
+
+
+class MockLoginRequest(BaseModel):
+    """Developer / testing mock login payload."""
+    email: str = Field(..., description="Test user email address")
+    full_name: Optional[str] = Field(default=None, description="Test user display name")
+    google_sub: Optional[str] = Field(default=None, description="Optional stable subject ID")
+    profile_picture: Optional[str] = Field(default=None, description="Optional profile image URL")
+

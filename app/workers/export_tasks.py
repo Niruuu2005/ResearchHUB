@@ -15,9 +15,10 @@ def generate_export_report_task(
     citation_style: str = "IEEE",
     project_id: Optional[int] = None,
     paper_ids: Optional[List[int]] = None,
+    user_id: Optional[str] = None,
 ):
-    """Asynchronously generates and compiles heavy research reports in PDF/DOCX/MD/BibTeX."""
-    logger.info(f"Starting asynchronous report generation: '{title}' ({format_type.upper()})")
+    """Asynchronously generates and compiles heavy research reports in PDF/DOCX/MD/BibTeX with user scoping."""
+    logger.info(f"Starting asynchronous report generation: '{title}' ({format_type.upper()}) for user: {user_id}")
     with SessionLocal() as db:
         try:
             service = ExportService()
@@ -29,6 +30,7 @@ def generate_export_report_task(
                 citation_style=citation_style,
                 project_id=project_id,
                 paper_ids=paper_ids,
+                user_id=user_id,
             )
             logger.info(f"Report export generated successfully: ID {report.id} at {report.file_path}")
             return {

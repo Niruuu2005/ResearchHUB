@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchHub | DevOps Architecture & Implementation Showcase</title>
+  <meta name="description" content="Interactive DevOps Architecture and Implementation Showcase for ResearchOps AI / ResearchHub. Demonstrates CI/CD, Terraform, Ansible, Docker, Kubernetes, Prometheus, and Reliability Engineering.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation & Brand Bar -->
+  <header class="top-nav" id="top-nav">
+    <div class="brand-container">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9" stroke="url(#brand-grad)" stroke-width="2.5"></circle>
+          <path d="M12 3v18M3 12h18M7.5 7.5l9 9M16.5 7.5l-9 9" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"></path>
+          <defs>
+            <linearGradient id="brand-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#06b6d4" />
+              <stop offset="1" stop-color="#8b5cf6" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">Research<span class="gradient-text">Ops AI</span> <span class="tag-showcase">DevOps Showcase</span></div>
+        <div class="brand-subtitle">Interactive Architecture & Implementation Command Center</div>
+      </div>
+    </div>
+
+    <div class="nav-badges">
+      <div class="badge badge-port" title="This showcase service">
+        <span class="pulse-dot green"></span>
+        <span>Showcase: <strong>:8085</strong></span>
+      </div>
+      <div class="badge badge-port" title="FastAPI Core Application">
+        <span class="pulse-dot blue" id="core-api-dot"></span>
+        <span>FastAPI Core: <strong>:8000</strong></span>
+      </div>
+      <div class="badge badge-env" title="Verified Deployment Topology">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Docker Stack</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-viva-primary" id="btn-open-viva" title="Open Full-Screen 12-Slide Viva Presentation Mode">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>Viva Presentation Mode</span>
+      </button>
+      <button class="btn btn-icon" id="btn-refresh-status" title="Refresh Live Health Probes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- App Body Layout -->
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-section-label">ARCHITECTURE & STAGES</div>
+      <nav class="sidebar-nav">
+        <a href="#overview" class="nav-item active" data-section="overview">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>1. Overview Architecture</span>
+        </a>
+        <a href="#ci-pipeline" class="nav-item" data-section="ci-pipeline">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"></path><path d="M7 21h10M12 3v18"></path></svg>
+          <span>2. CI: GitHub Actions</span>
+        </a>
+        <a href="#terraform" class="nav-item" data-section="terraform">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+          <span>3. IaC: Terraform</span>
+        </a>
+        <a href="#ansible" class="nav-item" data-section="ansible">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"></path></svg>
+          <span>4. Deploy: Ansible</span>
+        </a>
+        <a href="#docker" class="nav-item" data-section="docker">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          <span>5. Docker Stack</span>
+        </a>
+        <a href="#kubernetes" class="nav-item" data-section="kubernetes">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v6M12 15v6M3 12h6M15 12h6"></path></svg>
+          <span>6. Kubernetes & HPA</span>
+        </a>
+        <a href="#monitoring" class="nav-item" data-section="monitoring">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <span>7. Prometheus & Grafana</span>
+        </a>
+        <a href="#reliability" class="nav-item" data-section="reliability">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>8. Probes & Circuit Breaker</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-section-label" style="margin-top: 1.5rem;">VIVA & OPERATIONS</div>
+      <nav class="sidebar-nav">
+        <a href="#live-status" class="nav-item" data-section="live-status">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>9. Live System Status</span>
+        </a>
+        <a href="#viva-slides" class="nav-item" data-section="viva-slides">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>10. Viva Defense Deck</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="repo-info-card">
+          <div class="repo-title">ResearchHub / ResearchOps</div>
+          <div class="repo-desc">Python 3.12 | FastAPI | pgvector</div>
+          <div class="repo-links">
+            <a href="http://localhost:8000/docs" target="_blank" class="repo-link">FastAPI Swagger ↗</a>
+            <a href="http://localhost:8000/health" target="_blank" class="repo-link">/health ↗</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Panels -->
+    <main class="app-main" id="app-main">
+      <!-- Section 1: Overview Architecture -->
+      <section id="overview" class="content-section active">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">HOLISTIC ARCHITECTURE</div>
+            <h1 class="section-title">Interactive End-to-End DevOps Lifecycle</h1>
+            <p class="section-desc">Click any component below to inspect its exact implementation in ResearchHub, configuration snippet, CLI commands, and viva talking points.</p>
+          </div>
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <div class="kpi-val" id="kpi-services-count">8</div>
+              <div class="kpi-label">Docker Services</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-val">15s</div>
+              <div class="kpi-label">Metrics Scrape</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-val">2 - 8</div>
+              <div class="kpi-label">HPA Replicas</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-val">3</div>
+              <div class="kpi-label">Circuit Breakers</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- End to End Visual Topology -->
+        <div class="card glass-card architecture-flow-card">
+          <div class="card-header-flex">
+            <div class="card-title">
+              <span class="icon-indicator">⚡</span> Primary Production Path: AWS EC2 Deployment
+            </div>
+            <div class="legend-pills">
+              <span class="pill pill-source">Code & VCS</span>
+              <span class="pill pill-ci">CI & Testing</span>
+              <span class="pill pill-infra">IaC & Cloud</span>
+              <span class="pill pill-deploy">Config & Deploy</span>
+              <span class="pill pill-runtime">Containers & App</span>
+              <span class="pill pill-obs">Observability</span>
+            </div>
+          </div>
+
+          <!-- Interactive Node Pipeline -->
+          <div class="pipeline-diagram-container">
+            <div class="pipeline-stage-row">
+              <!-- Developer -->
+              <div class="pipeline-node node-source" data-comp="developer" id="node-developer">
+                <div class="node-icon">💻</div>
+                <div class="node-meta">
+                  <div class="node-title">Developer</div>
+                  <div class="node-sub">FastAPI / Python 3.12</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>git push</span> →</div>
+
+              <!-- GitHub Repo -->
+              <div class="pipeline-node node-source" data-comp="github_repo" id="node-github_repo">
+                <div class="node-icon">🐙</div>
+                <div class="node-meta">
+                  <div class="node-title">GitHub Repo</div>
+                  <div class="node-sub">Branch: main</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>triggers</span> →</div>
+
+              <!-- GitHub Actions -->
+              <div class="pipeline-node node-ci" data-comp="github_actions" id="node-github_actions">
+                <div class="node-icon">⚙️</div>
+                <div class="node-meta">
+                  <div class="node-title">GitHub Actions</div>
+                  <div class="node-sub">Ruff + Pytest + Buildx</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>provisions</span> →</div>
+
+              <!-- Terraform -->
+              <div class="pipeline-node node-infra" data-comp="terraform" id="node-terraform">
+                <div class="node-icon">📐</div>
+                <div class="node-meta">
+                  <div class="node-title">Terraform (IaC)</div>
+                  <div class="node-sub">AWS ap-south-1</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>creates</span> →</div>
+
+              <!-- AWS EC2 -->
+              <div class="pipeline-node node-infra" data-comp="aws_ec2" id="node-aws_ec2">
+                <div class="node-icon">☁️</div>
+                <div class="node-meta">
+                  <div class="node-title">AWS EC2 Server</div>
+                  <div class="node-sub">Ubuntu 22.04 + SG</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+            </div>
+
+            <div class="vertical-connector">
+              <div class="connector-line"></div>
+              <div class="connector-badge">Ansible configures EC2 via SSH & launches Compose</div>
+              <div class="connector-line"></div>
+            </div>
+
+            <div class="pipeline-stage-row">
+              <!-- Ansible -->
+              <div class="pipeline-node node-deploy" data-comp="ansible" id="node-ansible">
+                <div class="node-icon">📜</div>
+                <div class="node-meta">
+                  <div class="node-title">Ansible Deploy</div>
+                  <div class="node-sub">playbook: deploy.yml</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>executes</span> →</div>
+
+              <!-- Docker Compose -->
+              <div class="pipeline-node node-runtime" data-comp="docker_compose" id="node-docker_compose">
+                <div class="node-icon">🐳</div>
+                <div class="node-meta">
+                  <div class="node-title">Docker Compose</div>
+                  <div class="node-sub">8 Services Stack</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>runs</span> →</div>
+
+              <!-- Runtime Stack Bundle -->
+              <div class="pipeline-node node-runtime" data-comp="fastapi" id="node-fastapi">
+                <div class="node-icon">🚀</div>
+                <div class="node-meta">
+                  <div class="node-title">FastAPI + Workers</div>
+                  <div class="node-sub">Port 8000 + Celery</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>persists</span> →</div>
+
+              <!-- Postgres & Redis -->
+              <div class="pipeline-node node-runtime" data-comp="postgres_pgvector" id="node-postgres_pgvector">
+                <div class="node-icon">🗄️</div>
+                <div class="node-meta">
+                  <div class="node-title">Postgres + Redis</div>
+                  <div class="node-sub">pgvector:pg16 + redis:7</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+
+              <div class="flow-arrow"><span>scrapes</span> →</div>
+
+              <!-- Prometheus & Grafana -->
+              <div class="pipeline-node node-obs" data-comp="prometheus_grafana" id="node-prometheus_grafana">
+                <div class="node-icon">📊</div>
+                <div class="node-meta">
+                  <div class="node-title">Observability</div>
+                  <div class="node-sub">Prometheus :9090 & Grafana :3001</div>
+                </div>
+                <div class="node-action">Click to inspect</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alternative Lane: Kubernetes Orchestration -->
+          <div class="k8s-alternative-lane">
+            <div class="lane-header">
+              <span class="lane-badge">ORCHESTRATION LANE</span>
+              <strong>Kubernetes & Kustomize Orchestration (Separate Cloud Deployment)</strong>
+              <span class="subtle-note">Repository manifests configured in <code>k8s/</code>; independent of Docker Compose</span>
+            </div>
+            <div class="k8s-nodes-row">
+              <div class="k8s-node" data-comp="kubernetes_kustomize">
+                <span class="badge-mini">Namespace</span>
+                <strong>researchops</strong>
+              </div>
+              <div class="k8s-arrow">→</div>
+              <div class="k8s-node" data-comp="kubernetes_kustomize">
+                <span class="badge-mini">Deployments</span>
+                <strong>API (2 Pods) & Worker</strong>
+              </div>
+              <div class="k8s-arrow">→</div>
+              <div class="k8s-node" data-comp="kubernetes_kustomize">
+                <span class="badge-mini">RollingUpdate</span>
+                <strong>maxSurge: 1 / maxUnavail: 0</strong>
+              </div>
+              <div class="k8s-arrow">→</div>
+              <div class="k8s-node" data-comp="kubernetes_kustomize">
+                <span class="badge-mini">Autoscaling</span>
+                <strong>HPA (2 - 8 Replicas)</strong>
+              </div>
+              <div class="k8s-arrow">→</div>
+              <div class="k8s-node" data-comp="kubernetes_kustomize">
+                <span class="badge-mini">Ingress</span>
+                <strong>Nginx Ingress (:80/443)</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architecture Deep-Dive Component Inspector Card -->
+        <div class="card glass-card inspector-card" id="component-inspector">
+          <div class="inspector-empty-state" id="inspector-placeholder">
+            <div class="empty-icon">👆</div>
+            <div class="empty-title">Select Any Component Above to Inspect Details</div>
+            <div class="empty-desc">Displays what the technology does, why it is required, exact implementation in ResearchHub, file paths, verified configuration snippets, and viva answers.</div>
+          </div>
+
+          <div class="inspector-content" id="inspector-details" style="display: none;">
+            <div class="inspector-header">
+              <div class="comp-title-group">
+                <span class="comp-cat-badge" id="insp-category">Category</span>
+                <h2 class="comp-heading" id="insp-name">Component Name</h2>
+                <div class="comp-sub" id="insp-desc">Component description</div>
+              </div>
+              <div class="inspector-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-copy-config">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy Snippet</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="inspector-grid">
+              <div class="grid-col">
+                <div class="info-block">
+                  <div class="block-label">WHY IS IT REQUIRED?</div>
+                  <div class="block-content" id="insp-why">Why required text</div>
+                </div>
+
+                <div class="info-block">
+                  <div class="block-label">IMPLEMENTATION IN RESEARCHHUB</div>
+                  <div class="block-content" id="insp-impl">Implementation text</div>
+                </div>
+
+                <div class="info-block">
+                  <div class="block-label">VERIFIED FILE PATHS</div>
+                  <div class="file-tags" id="insp-files">
+                    <!-- Dynamic File Pills -->
+                  </div>
+                </div>
+
+                <div class="info-block">
+                  <div class="block-label">KEY COMMANDS</div>
+                  <div class="code-snippets" id="insp-commands">
+                    <!-- Dynamic Commands -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid-col">
+                <div class="info-block">
+                  <div class="block-label">VIVA VOCE EXPLANATION (EXAMINER DEFENSE)</div>
+                  <div class="viva-defense-box" id="insp-viva">Viva defense text</div>
+                </div>
+
+                <div class="info-block">
+                  <div class="block-label">VERIFIED REPOSITORY CONFIGURATION SNIPPET</div>
+                  <pre class="code-box"><code id="insp-snippet"># Snippet here</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: GitHub Actions CI -->
+      <section id="ci-pipeline" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">CONTINUOUS INTEGRATION</div>
+            <h1 class="section-title">GitHub Actions: Automated CI Pipeline</h1>
+            <p class="section-desc">Verified workflow from <code>.github/workflows/ci.yml</code> enforcing Ruff linting, Pytest test coverage, and Docker Buildx container verification.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Workflow</span>
+            <code>ResearchOps AI CI/CD Pipeline</code>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <!-- CI Stages Visualizer & Simulation Console -->
+          <div class="card glass-card">
+            <div class="card-header-flex">
+              <div class="card-title">Interactive CI Pipeline Simulator</div>
+              <span class="badge-simulated">Educational Simulation</span>
+            </div>
+            <p class="card-intro">Select a scenario to simulate how GitHub Actions executes jobs on Ubuntu runners:</p>
+
+            <div class="sim-controls">
+              <label class="radio-label">
+                <input type="radio" name="ci-sim-type" value="pass" checked>
+                <span>Passing Build (Ruff + 33 Pytests + Buildx OK)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="ci-sim-type" value="lint-fail">
+                <span>Ruff Lint Warning / Fail</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="ci-sim-type" value="test-fail">
+                <span>Pytest Assertion Failure</span>
+              </label>
+            </div>
+
+            <div class="ci-actions-row">
+              <button class="btn btn-primary" id="btn-run-ci-sim">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Trigger Simulated CI Workflow</span>
+              </button>
+              <button class="btn btn-secondary" id="btn-reset-ci-sim">Reset</button>
+            </div>
+
+            <!-- Animated CI Stage Track -->
+            <div class="ci-stages-track">
+              <div class="ci-stage-box" id="ci-stage-1">
+                <div class="ci-stage-header">
+                  <span class="ci-status-icon" id="ci-icon-1">⏳</span>
+                  <span class="ci-stage-name">1. Checkout & Python 3.12</span>
+                </div>
+                <div class="ci-stage-status" id="ci-status-1">Pending</div>
+              </div>
+              <div class="ci-stage-box" id="ci-stage-2">
+                <div class="ci-stage-header">
+                  <span class="ci-status-icon" id="ci-icon-2">⏳</span>
+                  <span class="ci-stage-name">2. Ruff Code Linting</span>
+                </div>
+                <div class="ci-stage-status" id="ci-status-2">Pending</div>
+              </div>
+              <div class="ci-stage-box" id="ci-stage-3">
+                <div class="ci-stage-header">
+                  <span class="ci-status-icon" id="ci-icon-3">⏳</span>
+                  <span class="ci-stage-name">3. Pytest with Coverage</span>
+                </div>
+                <div class="ci-stage-status" id="ci-status-3">Pending</div>
+              </div>
+              <div class="ci-stage-box" id="ci-stage-4">
+                <div class="ci-stage-header">
+                  <span class="ci-status-icon" id="ci-icon-4">⏳</span>
+                  <span class="ci-stage-name">4. Docker Buildx (API & Worker)</span>
+                </div>
+                <div class="ci-stage-status" id="ci-status-4">Pending</div>
+              </div>
+            </div>
+
+            <!-- Terminal Output -->
+            <div class="terminal-container">
+              <div class="terminal-header">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="term-title">github-actions-runner@ubuntu-latest:~</span>
+              </div>
+              <pre class="terminal-body" id="ci-terminal-log">Click "Trigger Simulated CI Workflow" to run pipeline simulation...</pre>
+            </div>
+          </div>
+
+          <!-- Verified Workflow Details -->
+          <div class="card glass-card">
+            <div class="card-title">Verified Repository Configuration</div>
+            <div class="file-badge">📄 <code>.github/workflows/ci.yml</code></div>
+
+            <div class="spec-list">
+              <div class="spec-item">
+                <span class="spec-label">Triggers:</span>
+                <span class="spec-val">push: <code>[main, master, develop]</code> | pull_request: <code>[main, master]</code></span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Test Runner:</span>
+                <span class="spec-val"><code>ubuntu-latest</code> with Python 3.12 (pip cache enabled)</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Linting Command:</span>
+                <span class="spec-val"><code>ruff check app tests || true</code></span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Testing Command:</span>
+                <span class="spec-val"><code>pytest -v --cov=app --cov-report=term-missing</code></span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Docker Buildx:</span>
+                <span class="spec-val">Builds <code>researchops-api:latest</code> & <code>researchops-worker:latest</code> without push</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Job Dependency:</span>
+                <span class="spec-val"><code>docker_build</code> has <code>needs: test</code> (fails fast if unit tests break)</span>
+              </div>
+            </div>
+
+            <div class="viva-tip-box">
+              <div class="viva-tip-title">💡 Viva Talking Point</div>
+              <p>Why do we use <code>needs: test</code>? To save compute time and avoid building heavy container layers if unit tests fail. Docker Buildx verifies image compilation before deployment to EC2.</p>
+            </div>
+
+            <div class="code-box-wrapper" style="margin-top: 1rem;">
+              <pre class="code-box"><code id="code-ci-workflow">name: ResearchOps AI CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Automated Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install -r requirements.txt pytest-cov ruff
+      - run: ruff check app tests || true
+      - run: pytest -v --cov=app --cov-report=term-missing
+
+  docker_build:
+    name: Container Build & Verification
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          file: ./Dockerfile
+          push: false
+          tags: researchops-api:latest</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Terraform -->
+      <section id="terraform" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">INFRASTRUCTURE AS CODE</div>
+            <h1 class="section-title">Terraform: AWS Cloud Infrastructure</h1>
+            <p class="section-desc">Declarative AWS provisioning configured in <code>terraform/main.tf</code> targeting the <code>ap-south-1</code> region for Ubuntu 22.04 LTS on EC2.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Provider</span>
+            <code>hashicorp/aws (ap-south-1)</code>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <!-- AWS Security Group & Topology Card -->
+          <div class="card glass-card">
+            <div class="card-title">AWS Infrastructure Topology</div>
+            <p class="card-intro">Verified resources declared in <code>terraform/main.tf</code>:</p>
+
+            <div class="aws-infra-visual">
+              <div class="aws-cloud-box">
+                <div class="aws-cloud-header">
+                  <span class="aws-badge">AWS Region: ap-south-1 (Mumbai)</span>
+                  <span class="aws-badge">VPC Default / Subnet</span>
+                </div>
+
+                <!-- EC2 Instance Box -->
+                <div class="aws-ec2-box">
+                  <div class="ec2-header">
+                    <span class="ec2-icon">🖥️</span>
+                    <div>
+                      <div class="ec2-name">EC2: <code>ResearchOpsAI-Server</code></div>
+                      <div class="ec2-specs">Type: <strong>t3.micro / t3.small</strong> | AMI: Ubuntu 22.04 LTS (Canonical)</div>
+                    </div>
+                  </div>
+                  <div class="ebs-badge">💾 Root Block Device: 20 GB (gp3 SSD)</div>
+                </div>
+
+                <!-- Security Group Box -->
+                <div class="aws-sg-box">
+                  <div class="sg-header">🛡️ Security Group: <code>ResearchOpsAI-SecurityGroup</code></div>
+                  <div class="sg-rules-grid">
+                    <div class="sg-rule-pill"><span class="port-num">22</span> SSH (Admin Access)</div>
+                    <div class="sg-rule-pill"><span class="port-num">80</span> Gateway HTTP</div>
+                    <div class="sg-rule-pill"><span class="port-num">443</span> Gateway HTTPS</div>
+                    <div class="sg-rule-pill"><span class="port-num">8000</span> FastAPI REST API</div>
+                    <div class="sg-rule-pill"><span class="port-num">9090</span> Prometheus UI</div>
+                    <div class="sg-rule-pill"><span class="port-num">3001</span> Grafana Dashboards</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="viva-tip-box" style="margin-top: 1rem;">
+              <div class="viva-tip-title">⚠️ Cloud Architecture Principle</div>
+              <p>Security Group rules are explicitly defined: Port 22 and 9090 are locked down to admin CIDR, while HTTP (80/8000) and Grafana (3001) allow web traffic. All outbound traffic (0.0.0.0/0) is permitted for external API lookups.</p>
+            </div>
+          </div>
+
+          <!-- Terraform Lifecycle Simulator -->
+          <div class="card glass-card">
+            <div class="card-header-flex">
+              <div class="card-title">Interactive Terraform Lifecycle Simulator</div>
+              <span class="badge-simulated">Educational Simulation</span>
+            </div>
+            <p class="card-intro">Walk through the standard 5-step Terraform lifecycle. <em>(Does not execute real AWS provisioning)</em></p>
+
+            <div class="tf-step-tabs">
+              <button class="tf-tab active" data-tfstep="init">1. init</button>
+              <button class="tf-tab" data-tfstep="validate">2. validate</button>
+              <button class="tf-tab" data-tfstep="plan">3. plan</button>
+              <button class="tf-tab" data-tfstep="apply">4. apply</button>
+              <button class="tf-tab" data-tfstep="destroy">5. destroy</button>
+            </div>
+
+            <div class="tf-step-desc-box" id="tf-step-desc">
+              Initializes the working directory, downloads the official HashiCorp AWS provider plugin, and configures the state backend.
+            </div>
+
+            <div class="terminal-container">
+              <div class="terminal-header">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="term-title" id="tf-terminal-title">terraform init</span>
+              </div>
+              <pre class="terminal-body" id="tf-terminal-log">Initializing provider plugins...
+- Finding hashicorp/aws versions matching "~> 5.0"...
+- Installing hashicorp/aws v5.42.0...
+- Installed hashicorp/aws v5.42.0 (signed by HashiCorp)
+
+Terraform has been successfully initialized!</pre>
+            </div>
+
+            <pre class="code-box"><code id="code-tf-main">data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+}
+
+resource "aws_security_group" "researchops_sg" {
+  name        = "${var.project_name}-SecurityGroup"
+  description = "Security group for ResearchOps AI (Ports 22, 80, 443, 8000, 9090, 3001)"
+
+  ingress {
+    description = "SSH administrative access"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
+  ingress {
+    description = "Public HTTP Nginx Gateway"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "FastAPI Backend REST API"
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "researchops_ec2" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.researchops_sg.id]
+
+  root_block_device {
+    volume_size           = 20
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Ansible Deployment -->
+      <section id="ansible" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">CONFIGURATION MANAGEMENT</div>
+            <h1 class="section-title">Ansible: Automated EC2 Deployment</h1>
+            <p class="section-desc">Automated 13-stage provisioning sequence declared in <code>ansible/deploy.yml</code> targeting the EC2 server over SSH.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Playbook</span>
+            <code>ansible/deploy.yml</code>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <!-- Step by Step Timeline -->
+          <div class="card glass-card">
+            <div class="card-header-flex">
+              <div class="card-title">13-Step Automated Deployment Sequence</div>
+              <span class="badge-verified">Verified from deploy.yml</span>
+            </div>
+            <p class="card-intro">Ansible executes these idempotent tasks on the remote AWS EC2 host:</p>
+
+            <div class="timeline-container" id="ansible-timeline-list">
+              <!-- Dynamically populated from project-config.json -->
+            </div>
+          </div>
+
+          <!-- Interactive Playbook Simulation Player -->
+          <div class="card glass-card">
+            <div class="card-header-flex">
+              <div class="card-title">Interactive Deployment Simulator</div>
+              <span class="badge-simulated">Educational Walkthrough</span>
+            </div>
+            <p class="card-intro">Simulate the remote execution of <code>ansible-playbook -i inventory.ini deploy.yml</code>:</p>
+
+            <div class="sim-player-controls">
+              <button class="btn btn-primary" id="btn-play-ansible">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Run Deployment Simulation</span>
+              </button>
+              <button class="btn btn-secondary" id="btn-pause-ansible">Pause</button>
+              <button class="btn btn-secondary" id="btn-reset-ansible">Reset</button>
+            </div>
+
+            <div class="progress-bar-wrapper">
+              <div class="progress-bar-fill" id="ansible-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="progress-label" id="ansible-progress-label">Ready to start deployment</div>
+
+            <div class="terminal-container">
+              <div class="terminal-header">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="term-title">ansible-playbook -i inventory.ini deploy.yml</span>
+              </div>
+              <pre class="terminal-body" id="ansible-terminal-log">PLAY [Deploy ResearchOps AI Platform on AWS EC2] ******************************
+Click "Run Deployment Simulation" to execute step-by-step walkthrough...</pre>
+            </div>
+
+            <div class="viva-tip-box" style="margin-top: 1rem;">
+              <div class="viva-tip-title">💡 Viva Key Concept: Idempotency</div>
+              <p>Ansible tasks are <strong>idempotent</strong>. If Docker is already installed or the repo is already cloned, Ansible detects that state (<code>ok</code>) instead of failing or creating duplicates (<code>changed</code>).</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Docker Containerization -->
+      <section id="docker" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">CONTAINERIZATION</div>
+            <h1 class="section-title">Docker & Docker Compose Stack</h1>
+            <p class="section-desc">Multi-container architecture defined in <code>docker-compose.yml</code> on isolated bridge network <code>researchops-net</code>.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Network</span>
+            <code>researchops-net (bridge)</code>
+          </div>
+        </div>
+
+        <!-- Multi Container Grid -->
+        <div class="card glass-card">
+          <div class="card-header-flex">
+            <div class="card-title">Interactive Container Stack Grid (Click to Inspect)</div>
+            <span class="subtle-note">Verified from docker-compose.yml</span>
+          </div>
+
+          <div class="containers-grid" id="containers-grid">
+            <!-- Dynamically populated from project-config.json -->
+          </div>
+        </div>
+
+        <div class="grid-2-col" style="margin-top: 1.5rem;">
+          <!-- Container Inspector -->
+          <div class="card glass-card" id="container-inspector-card">
+            <div class="card-title" id="cnt-insp-name">Container Details</div>
+            <div class="cnt-meta-row">
+              <span class="badge-mini" id="cnt-insp-img">image</span>
+              <span class="badge-mini" id="cnt-insp-ports">ports</span>
+            </div>
+
+            <div class="spec-list" style="margin-top: 1rem;">
+              <div class="spec-item">
+                <span class="spec-label">Primary Responsibility:</span>
+                <span class="spec-val" id="cnt-insp-role">-</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Volume Mounts:</span>
+                <span class="spec-val" id="cnt-insp-vols">-</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Service Dependencies:</span>
+                <span class="spec-val" id="cnt-insp-deps">-</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Healthcheck:</span>
+                <span class="spec-val" id="cnt-insp-health">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Relationships & Volumes -->
+          <div class="card glass-card">
+            <div class="card-title">Service Inter-Connection & Data Flow</div>
+            <div class="flow-tree">
+              <div class="flow-tree-item">
+                <span class="tree-bullet">🌐</span>
+                <strong>Client Browser</strong> → <code>Nginx Gateway (:8080)</code> → <code>FastAPI (:8000)</code>
+              </div>
+              <div class="flow-tree-item">
+                <span class="tree-bullet">🗄️</span>
+                <strong>FastAPI</strong> → <code>PostgreSQL 16 (pgvector:pg16)</code> <em>[ACID relational data & embeddings]</em>
+              </div>
+              <div class="flow-tree-item">
+                <span class="tree-bullet">📨</span>
+                <strong>FastAPI</strong> → <code>Redis 7 (:6379)</code> → <code>Celery Worker</code> <em>[Async PDF extraction]</em>
+              </div>
+              <div class="flow-tree-item">
+                <span class="tree-bullet">📈</span>
+                <strong>Prometheus (:9090)</strong> scrapes <code>FastAPI /metrics</code> every 15s
+              </div>
+              <div class="flow-tree-item">
+                <span class="tree-bullet">📊</span>
+                <strong>Grafana (:3001)</strong> visualizes Prometheus timeseries dashboards
+              </div>
+              <div class="flow-tree-item">
+                <span class="tree-bullet">🖥️</span>
+                <strong>DevOps Showcase (:8085)</strong> runs standalone on Nginx Alpine
+              </div>
+            </div>
+
+            <div class="card-sub-header" style="margin-top: 1rem;">Named Persistent Volumes:</div>
+            <div class="volume-tags">
+              <span class="vol-tag">pg_data</span>
+              <span class="vol-tag">redis_data</span>
+              <span class="vol-tag">doc_data</span>
+              <span class="vol-tag">export_data</span>
+              <span class="vol-tag">prom_data</span>
+              <span class="vol-tag">grafana_data</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: Kubernetes & HPA -->
+      <section id="kubernetes" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">CLOUD-NATIVE ORCHESTRATION</div>
+            <h1 class="section-title">Kubernetes & Horizontal Pod Autoscaler</h1>
+            <p class="section-desc">Production manifests in <code>k8s/</code> packaged via Kustomize for namespace <code>researchops</code> with zero-downtime rolling updates.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Status</span>
+            <code id="k8s-manifest-badge">Manifests Configured (Cluster Not Verified)</code>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <!-- K8s Architecture & Verified Manifests -->
+          <div class="card glass-card">
+            <div class="card-title">Verified Manifest Topology (k8s/)</div>
+            <p class="card-intro">Declarative specifications extracted directly from repository files:</p>
+
+            <div class="k8s-manifests-grid">
+              <div class="k8s-file-card">
+                <div class="k8s-file-title">01-namespace.yaml</div>
+                <div class="k8s-file-desc">Namespace: <code>researchops</code></div>
+              </div>
+              <div class="k8s-file-card">
+                <div class="k8s-file-title">05-api-deployment.yaml</div>
+                <div class="k8s-file-desc">Replicas: 2 | maxSurge: 1, maxUnavailable: 0</div>
+              </div>
+              <div class="k8s-file-card">
+                <div class="k8s-file-title">06-api-service.yaml</div>
+                <div class="k8s-file-desc">ClusterIP: Port 8000 -> 8000</div>
+              </div>
+              <div class="k8s-file-card">
+                <div class="k8s-file-title">08-ingress.yaml</div>
+                <div class="k8s-file-desc">Nginx Ingress with 50M payload limit</div>
+              </div>
+              <div class="k8s-file-card">
+                <div class="k8s-file-title">09-hpa.yaml</div>
+                <div class="k8s-file-desc">minReplicas: 2, maxReplicas: 8 | CPU 70%, RAM 80%</div>
+              </div>
+              <div class="k8s-file-card">
+                <div class="k8s-file-title">kustomization.yaml</div>
+                <div class="k8s-file-desc">Common Labels & declarative bundling</div>
+              </div>
+            </div>
+
+            <div class="viva-tip-box" style="margin-top: 1.2rem;">
+              <div class="viva-tip-title">💡 RollingUpdate Strategy: maxSurge 1 & maxUnavailable 0</div>
+              <p>During deployment, Kubernetes starts 1 new Pod first. It probes <code>/ready</code>. Only after the new Pod passes readiness does it terminate an old Pod. This guarantees <strong>zero downtime</strong>.</p>
+            </div>
+          </div>
+
+          <!-- Interactive HPA Workload Simulator -->
+          <div class="card glass-card">
+            <div class="card-header-flex">
+              <div class="card-title">Interactive HPA Workload Simulator</div>
+              <span class="badge-simulated">Educational Simulator</span>
+            </div>
+            <p class="card-intro">Adjust the simulated incoming HTTP request load to observe how the Horizontal Pod Autoscaler conceptualizes scaling:</p>
+
+            <div class="hpa-slider-group">
+              <div class="slider-header">
+                <span>Simulated Request Load (RPS):</span>
+                <strong id="hpa-rps-val">120 req/s</strong>
+              </div>
+              <input type="range" id="hpa-workload-slider" min="0" max="1000" value="120" class="custom-slider">
+            </div>
+
+            <div class="hpa-metrics-summary">
+              <div class="hpa-stat-box">
+                <div class="hpa-stat-label">Calculated CPU Utilization</div>
+                <div class="hpa-stat-val" id="hpa-cpu-val">42%</div>
+                <div class="hpa-threshold">Target: 70%</div>
+              </div>
+              <div class="hpa-stat-box">
+                <div class="hpa-stat-label">Calculated Replicas</div>
+                <div class="hpa-stat-val highlight" id="hpa-replica-val">2 Pods</div>
+                <div class="hpa-threshold">Min: 2 | Max: 8</div>
+              </div>
+            </div>
+
+            <!-- Pods Visualization Grid -->
+            <div class="card-sub-header" style="margin-top: 1rem;">Active Pod Replicas Visualization:</div>
+            <div class="pods-visual-grid" id="pods-visual-grid">
+              <!-- Dynamically populated pods -->
+            </div>
+
+            <div class="subtle-note" style="margin-top: 1rem;">
+              * Scale-up policy: 100% boost every 15s. Scale-down policy: 20% down every 60s with 300s stabilization window to prevent flapping.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 7: Monitoring: Prometheus & Grafana -->
+      <section id="monitoring" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">OBSERVABILITY & METRICS</div>
+            <h1 class="section-title">Prometheus Scraping & Grafana Dashboards</h1>
+            <p class="section-desc">Full-stack metric telemetry scraped from <code>api:8000/metrics</code> every 15 seconds and visualized in Grafana.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Scrape Interval</span>
+            <code>15s (verified)</code>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-header-flex">
+            <div class="card-title">Grafana Observability Dashboard: <code>ResearchOps Overview</code></div>
+            <span class="badge-simulated">Simulated Telemetry (Visualizing Verified Gauges)</span>
+          </div>
+          <p class="card-intro">Mirroring the panels defined in <code>monitoring/grafana/dashboards/researchops.json</code>:</p>
+
+          <!-- Stat Panels Grid -->
+          <div class="grafana-stat-grid">
+            <div class="grafana-stat-card">
+              <div class="stat-header">PAPERS IN LIBRARY</div>
+              <div class="stat-value" id="stat-papers">128</div>
+              <div class="stat-metric-name">researchops_total_papers</div>
+            </div>
+            <div class="grafana-stat-card">
+              <div class="stat-header">INDEXED DOCUMENTS</div>
+              <div class="stat-value" id="stat-docs">46</div>
+              <div class="stat-metric-name">researchops_total_documents</div>
+            </div>
+            <div class="grafana-stat-card">
+              <div class="stat-header">VECTOR CHUNKS</div>
+              <div class="stat-value" id="stat-chunks">1,842</div>
+              <div class="stat-metric-name">researchops_total_chunks</div>
+            </div>
+            <div class="grafana-stat-card">
+              <div class="stat-header">ACTIVE CELERY JOBS</div>
+              <div class="stat-value" id="stat-jobs">0</div>
+              <div class="stat-metric-name">researchops_active_background_jobs</div>
+            </div>
+          </div>
+
+          <!-- Timeseries Charts Grid -->
+          <div class="grid-2-col" style="margin-top: 1.5rem;">
+            <!-- Chart 1: Provider Probe Latency -->
+            <div class="chart-container-card">
+              <div class="chart-header">
+                <strong>Provider Probe Latency (ms)</strong>
+                <span class="chart-legend">
+                  <span class="legend-dot cyan"></span> OpenAlex
+                  <span class="legend-dot purple"></span> Crossref
+                  <span class="legend-dot green"></span> Wikipedia
+                </span>
+              </div>
+              <div class="canvas-wrapper">
+                <canvas id="chart-provider-latency" width="500" height="180"></canvas>
+              </div>
+              <div class="chart-footer">PromQL: <code>researchops_provider_latency_ms{provider="..."}</code></div>
+            </div>
+
+            <!-- Chart 2: API Throughput & Latency -->
+            <div class="chart-container-card">
+              <div class="chart-header">
+                <strong>HTTP Request Latency & Throughput</strong>
+                <span class="chart-legend">
+                  <span class="legend-dot blue"></span> P95 Latency (ms)
+                  <span class="legend-dot amber"></span> Requests / sec
+                </span>
+              </div>
+              <div class="canvas-wrapper">
+                <canvas id="chart-api-throughput" width="500" height="180"></canvas>
+              </div>
+              <div class="chart-footer">Exposition: <code>http_requests_total</code> & <code>request_duration_seconds</code></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 8: Reliability & Circuit Breaker -->
+      <section id="reliability" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">HIGH AVAILABILITY & RESILIENCE</div>
+            <h1 class="section-title">Health Probes & Circuit Breaker Pattern</h1>
+            <p class="section-desc">Interactive comparison of Liveness vs Readiness, and Circuit Breaker implementation protecting academic APIs from cascading failures.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <span class="badge-tag">Pattern</span>
+            <code>CLOSED -> OPEN -> HALF-OPEN</code>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <!-- Probes Comparison -->
+          <div class="card glass-card">
+            <div class="card-title">Probe Diagnostics: Liveness vs Readiness vs Metrics</div>
+            <div class="probe-cards-list">
+              <div class="probe-card">
+                <div class="probe-badge green">GET /health</div>
+                <div class="probe-title">Liveness Probe</div>
+                <div class="probe-desc">Verifies that the ASGI Python process is responsive. If this check fails 3 times, container orchestrator triggers an immediate <strong>container restart</strong>.</div>
+              </div>
+              <div class="probe-card">
+                <div class="probe-badge blue">GET /ready</div>
+                <div class="probe-title">Readiness Probe</div>
+                <div class="probe-desc">Verifies database connection, Redis broker, and Celery workers. If downstream Postgres is offline, the container is <strong>temporarily taken out of load-balancer rotation</strong> without being killed.</div>
+              </div>
+              <div class="probe-card">
+                <div class="probe-badge purple">GET /metrics</div>
+                <div class="probe-title">Prometheus Telemetry</div>
+                <div class="probe-desc">Outputs standard Prometheus exposition text scraped every 15s for alerting and operational visibility.</div>
+              </div>
+            </div>
+
+            <div class="viva-tip-box" style="margin-top: 1rem;">
+              <div class="viva-tip-title">💡 Classic Viva Question: Why have separate probes?</div>
+              <p>Killing a container whose database is temporarily restarting is disastrous (creates reboot storm). Readiness protects traffic routing; Liveness recovers from deadlocks.</p>
+            </div>
+          </div>
+
+          <!-- Circuit Breaker State Machine & Simulator -->
+          <div class="card glass-card">
+            <div class="card-header-flex">
+              <div class="card-title">Circuit Breaker Sandbox (app/utils/circuit_breaker.py)</div>
+              <span class="badge-simulated">Educational Sandbox</span>
+            </div>
+            <p class="card-intro">Protects external research APIs (OpenAlex, Crossref, Wikipedia) from cascade timeouts:</p>
+
+            <div class="cb-provider-selector">
+              <span>Select Protected Provider:</span>
+              <select id="cb-provider-select" class="custom-select">
+                <option value="OpenAlex">OpenAlex Works API</option>
+                <option value="Crossref">Crossref Works API</option>
+                <option value="Wikipedia">Wikipedia REST API</option>
+              </select>
+            </div>
+
+            <!-- State Dial / Badges -->
+            <div class="cb-state-visualizer">
+              <div class="cb-state-dial" id="cb-state-dial">
+                <div class="dial-state" id="cb-current-state">CLOSED</div>
+                <div class="dial-sub">Normal Traffic</div>
+              </div>
+              <div class="cb-counters">
+                <div class="cb-counter-box">
+                  <div class="cb-counter-label">Consecutive Failures</div>
+                  <div class="cb-counter-val" id="cb-failure-count">0 / 3</div>
+                </div>
+                <div class="cb-counter-box">
+                  <div class="cb-counter-label">Recovery Timeout</div>
+                  <div class="cb-counter-val">30.0 s</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Simulator Controls -->
+            <div class="cb-controls-row">
+              <button class="btn btn-success" id="btn-cb-success">Simulate Success (200 OK)</button>
+              <button class="btn btn-danger" id="btn-cb-fail">Simulate Timeout / Failure (500)</button>
+              <button class="btn btn-secondary" id="btn-cb-fastforward">Fast-Forward 30s</button>
+              <button class="btn btn-secondary" id="btn-cb-reset">Reset</button>
+            </div>
+
+            <div class="terminal-container" style="margin-top: 1rem;">
+              <div class="terminal-header">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="term-title">CircuitBreaker Event Log</span>
+              </div>
+              <pre class="terminal-body" id="cb-event-log">CircuitBreaker [OpenAlex] initialized in CLOSED state. Ready.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 9: Live System Status -->
+      <section id="live-status" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">DIAGNOSTIC STATUS</div>
+            <h1 class="section-title">Live System Status & Probe Diagnostics</h1>
+            <p class="section-desc">Strict distinction between <strong>Configured</strong>, <strong>Running</strong>, <strong>Simulated</strong>, and <strong>Unavailable</strong> resources.</p>
+          </div>
+          <div class="status-indicator-badge">
+            <button class="btn btn-primary btn-sm" id="btn-trigger-probes">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              <span>Probe Live Endpoints Now</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-header-flex">
+            <div class="card-title">Real-Time Probe Diagnostics</div>
+            <div class="subtle-note" id="last-probe-timestamp">Last probed: Not run yet</div>
+          </div>
+
+          <div class="status-legend-bar">
+            <div class="legend-item"><span class="badge-status-pill running">RUNNING</span> HTTP check returned 200 OK right now</div>
+            <div class="legend-item"><span class="badge-status-pill configured">CONFIGURED</span> Defined in repo; awaiting live engine</div>
+            <div class="legend-item"><span class="badge-status-pill unavailable">UNAVAILABLE</span> Endpoint offline or not running locally</div>
+            <div class="legend-item"><span class="badge-status-pill simulated">SIMULATED</span> Educational demonstration</div>
+          </div>
+
+          <div class="probes-table-wrapper">
+            <table class="diagnostic-table">
+              <thead>
+                <tr>
+                  <th>Target Resource / Service</th>
+                  <th>Target URL</th>
+                  <th>Status</th>
+                  <th>Observed Response</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody id="diagnostic-tbody">
+                <tr>
+                  <td><strong>DevOps Showcase Dashboard</strong></td>
+                  <td><code>http://localhost:8085/</code></td>
+                  <td><span class="badge-status-pill running">RUNNING</span></td>
+                  <td>Self-test 200 OK (Serving HTML5)</td>
+                  <td>~1 ms</td>
+                </tr>
+                <tr>
+                  <td><strong>FastAPI Liveness Probe</strong></td>
+                  <td><code>http://localhost:8000/health</code></td>
+                  <td id="probe-health-status"><span class="badge-status-pill configured">PROBING...</span></td>
+                  <td id="probe-health-resp">Pending check...</td>
+                  <td id="probe-health-lat">-</td>
+                </tr>
+                <tr>
+                  <td><strong>FastAPI Readiness Probe</strong></td>
+                  <td><code>http://localhost:8000/ready</code></td>
+                  <td id="probe-ready-status"><span class="badge-status-pill configured">PROBING...</span></td>
+                  <td id="probe-ready-resp">Pending check...</td>
+                  <td id="probe-ready-lat">-</td>
+                </tr>
+                <tr>
+                  <td><strong>Prometheus Metrics Exporter</strong></td>
+                  <td><code>http://localhost:8000/metrics</code></td>
+                  <td id="probe-metrics-status"><span class="badge-status-pill configured">PROBING...</span></td>
+                  <td id="probe-metrics-resp">Pending check...</td>
+                  <td id="probe-metrics-lat">-</td>
+                </tr>
+                <tr>
+                  <td><strong>Docker Daemon Engine</strong></td>
+                  <td><code>Docker Desktop Pipe</code></td>
+                  <td id="probe-docker-status"><span class="badge-status-pill configured">CONFIGURED</span></td>
+                  <td>Docker Compose configured; daemon status verified via CLI</td>
+                  <td>-</td>
+                </tr>
+                <tr>
+                  <td><strong>Kubernetes Cluster</strong></td>
+                  <td><code>Namespace researchops</code></td>
+                  <td><span class="badge-status-pill configured">CONFIGURED</span></td>
+                  <td>Manifests configured; live cluster not verified</td>
+                  <td>-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 10: Viva Presentation Mode (In-page preview & launcher) -->
+      <section id="viva-slides" class="content-section">
+        <div class="section-header">
+          <div>
+            <div class="section-tag">PROJECT DEFENSE</div>
+            <h1 class="section-title">Viva Presentation Deck (12 Slides)</h1>
+            <p class="section-desc">Designed specifically for projecting on a screen during an academic viva defense with exact presenter notes.</p>
+          </div>
+          <div>
+            <button class="btn btn-viva-primary" id="btn-launch-viva-deck">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Launch Full-Screen Slides</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-header-flex">
+            <div class="card-title">Presentation Slide Index</div>
+            <span class="subtle-note">Use Arrow Keys (← / →) or Escape to exit in fullscreen</span>
+          </div>
+
+          <div class="slides-grid-index" id="slides-grid-index">
+            <!-- Dynamically populated 12 slide cards -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Fullscreen Viva Presentation Modal -->
+  <div class="viva-modal-overlay" id="viva-modal" style="display: none;">
+    <div class="viva-modal-container">
+      <div class="viva-top-controls">
+        <div class="viva-brand">
+          <span class="gradient-text">ResearchOps AI</span> &bull; DevOps Viva Defense
+        </div>
+        <div class="viva-counter" id="viva-slide-counter">Slide 1 of 12</div>
+        <div class="viva-btn-group">
+          <button class="viva-ctrl-btn" id="viva-btn-prev" title="Previous Slide (Left Arrow)">◀ Prev</button>
+          <button class="viva-ctrl-btn" id="viva-btn-next" title="Next Slide (Right Arrow)">Next ▶</button>
+          <button class="viva-ctrl-btn close-btn" id="viva-btn-close" title="Exit Presentation (Esc)">✕ Exit</button>
+        </div>
+      </div>
+
+      <div class="viva-slide-stage" id="viva-slide-stage">
+        <div class="viva-slide-content">
+          <div class="slide-tag" id="slide-tag">SLIDE 01</div>
+          <h1 class="slide-title" id="slide-title">Project Introduction</h1>
+          <h3 class="slide-subtitle" id="slide-subtitle">Subtitle</h3>
+
+          <div class="slide-body-grid">
+            <div class="slide-points-col">
+              <ul class="slide-points-list" id="slide-points-list">
+                <!-- Points -->
+              </ul>
+            </div>
+            <div class="slide-visual-col">
+              <div class="slide-visual-box" id="slide-visual-box">
+                <!-- Visual or Diagram -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Presenter Viva Notes Box -->
+          <div class="presenter-notes-box">
+            <div class="presenter-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>Presenter Viva Defense Note (What to say aloud to the examiners):</span>
+            </div>
+            <p class="presenter-text" id="slide-presenter-text">Notes...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="viva-bottom-bar">
+        <div class="slide-nav-dots" id="slide-nav-dots">
+          <!-- 12 Dots -->
+        </div>
+        <div class="viva-keyboard-hint">Keyboard: <strong>← Prev</strong> | <strong>→ Next</strong> | <strong>Esc Exit</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

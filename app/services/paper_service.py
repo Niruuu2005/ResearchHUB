@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class PaperService:
-    """Manages paper persistence, library interactions, and project associations."""
+    """Manages paper persistence, library interactions, and user-isolated project associations."""
 
     @staticmethod
     def get_papers(
@@ -18,8 +18,11 @@ class PaperService:
         limit: int = 50,
         project_id: Optional[int] = None,
         search: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> List[Paper]:
         query = db.query(Paper)
+        if user_id is not None:
+            query = query.filter(Paper.user_id == str(user_id))
         if project_id:
             query = query.join(ProjectPaper).filter(ProjectPaper.project_id == project_id)
         if search:
@@ -28,23 +31,35 @@ class PaperService:
         return query.order_by(Paper.created_at.desc()).offset(skip).limit(limit).all()
 
     @staticmethod
-    def get_paper_by_id(db: Session, paper_id: int) -> Optional[Paper]:
-        return db.query(Paper).filter(Paper.id == paper_id).first()
+    def get_paper_by_id(db: Session, paper_id: int, user_id: Optional[str] = None) -> Optional[Paper]:
+        query = db.query(Paper).filter(Paper.id == paper_id)
+        if user_id is not None:
+            query = query.filter(Paper.user_id == str(user_id))
+        return query.first()
 
     @staticmethod
-    def save_paper(db: Session, payload: PaperSaveRequest) -> Paper:
-        # Check if paper with DOI already exists
+    def save_paper(db: Session, payload: PaperSaveRequest, user_id: Optional[str] = None) -> Paper:
+        # Check if paper with DOI already exists for this user
         paper = None
+        user_str = str(user_id) if user_id else None
+
         if payload.doi:
-            paper = db.query(Paper).filter(Paper.doi == payload.doi.strip().lower()).first()
+            q = db.query(Paper).filter(Paper.doi == payload.doi.strip().lower())
+            if user_str:
+                q = q.filter(Paper.user_id == user_str)
+            paper = q.first()
 
         if not paper:
-            # Check normalized title
+            # Check normalized title for this user
             norm_title = payload.title.strip()
-            paper = db.query(Paper).filter(Paper.title.ilike(norm_title)).first()
+            q = db.query(Paper).filter(Paper.title.ilike(norm_title))
+            if user_str:
+                q = q.filter(Paper.user_id == user_str)
+            paper = q.first()
 
         if not paper:
             paper = Paper(
+                user_id=user_str,
                 title=payload.title.strip(),
                 abstract=payload.abstract or "",
                 doi=(payload.doi.strip().lower() if payload.doi else None),
@@ -70,25 +85,35 @@ class PaperService:
                 paper.venue = payload.venue
             if payload.pdf_url and not paper.pdf_url:
                 paper.pdf_url = payload.pdf_url
-                paper.open_access = payload.open_access or paper.open_access
+            if user_str and not paper.user_id:
+                paper.user_id = user_str
+            paper.open_access = payload.open_access or paper.open_access
 
-        # Associate with project if specified
+        # Associate with project if specified and authorized
         if payload.project_id:
-            existing_link = db.query(ProjectPaper).filter(
-                ProjectPaper.project_id == payload.project_id,
-                ProjectPaper.paper_id == paper.id,
-            ).first()
-            if not existing_link:
-                link = ProjectPaper(project_id=payload.project_id, paper_id=paper.id)
-                db.add(link)
+            project_query = db.query(ResearchProject).filter(ResearchProject.id == payload.project_id)
+            if user_str:
+                project_query = project_query.filter(ResearchProject.user_id == user_str)
+            project = project_query.first()
+            if project:
+                existing_link = db.query(ProjectPaper).filter(
+                    ProjectPaper.project_id == payload.project_id,
+                    ProjectPaper.paper_id == paper.id,
+                ).first()
+                if not existing_link:
+                    link = ProjectPaper(project_id=payload.project_id, paper_id=paper.id)
+                    db.add(link)
 
         db.commit()
         db.refresh(paper)
         return paper
 
     @staticmethod
-    def delete_paper(db: Session, paper_id: int) -> bool:
-        paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    def delete_paper(db: Session, paper_id: int, user_id: Optional[str] = None) -> bool:
+        query = db.query(Paper).filter(Paper.id == paper_id)
+        if user_id is not None:
+            query = query.filter(Paper.user_id == str(user_id))
+        paper = query.first()
         if not paper:
             return False
         db.delete(paper)
@@ -96,12 +121,18 @@ class PaperService:
         return True
 
     @staticmethod
-    def get_related_papers(db: Session, paper_id: int, limit: int = 5) -> List[dict]:
-        target = db.query(Paper).filter(Paper.id == paper_id).first()
+    def get_related_papers(db: Session, paper_id: int, limit: int = 5, user_id: Optional[str] = None) -> List[dict]:
+        target_query = db.query(Paper).filter(Paper.id == paper_id)
+        if user_id is not None:
+            target_query = target_query.filter(Paper.user_id == str(user_id))
+        target = target_query.first()
         if not target:
             return []
 
-        all_papers = db.query(Paper).filter(Paper.id != paper_id).all()
+        all_query = db.query(Paper).filter(Paper.id != paper_id)
+        if user_id is not None:
+            all_query = all_query.filter(Paper.user_id == str(user_id))
+        all_papers = all_query.all()
         target_words = set(target.title.lower().split())
 
         scored = []

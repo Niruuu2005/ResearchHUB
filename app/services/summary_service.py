@@ -47,18 +47,22 @@ class SummaryService:
             generated_at=summary.generated_at,
         )
 
-    def list_summaries(self, db: Session) -> List[PaperSummaryOut]:
+    def list_summaries(self, db: Session, user_id: Optional[str] = None) -> List[PaperSummaryOut]:
         """Return saved paper summaries only — does not auto-generate."""
-        rows = (
+        query = (
             db.query(PaperSummary, Paper)
             .join(Paper, Paper.id == PaperSummary.paper_id)
-            .order_by(PaperSummary.generated_at.desc())
-            .all()
         )
+        if user_id is not None:
+            query = query.filter(Paper.user_id == str(user_id))
+        rows = query.order_by(PaperSummary.generated_at.desc()).all()
         return [self._to_summary_out(paper, summary) for summary, paper in rows]
 
-    def summarize_paper(self, db: Session, paper_id: int) -> PaperSummaryOut:
-        paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    def summarize_paper(self, db: Session, paper_id: int, user_id: Optional[str] = None) -> PaperSummaryOut:
+        query = db.query(Paper).filter(Paper.id == paper_id)
+        if user_id is not None:
+            query = query.filter(Paper.user_id == str(user_id))
+        paper = query.first()
         if not paper:
             raise ValueError(f"Paper with ID {paper_id} not found.")
 
@@ -130,17 +134,22 @@ class SummaryService:
             generated_at=summary_db.generated_at,
         )
 
-    def summarize_project(self, db: Session, project_id: int) -> CollectionSummaryOut:
-        project = db.query(ResearchProject).filter(ResearchProject.id == project_id).first()
+    def summarize_project(self, db: Session, project_id: int, user_id: Optional[str] = None) -> CollectionSummaryOut:
+        project_q = db.query(ResearchProject).filter(ResearchProject.id == project_id)
+        if user_id is not None:
+            project_q = project_q.filter(ResearchProject.user_id == str(user_id))
+        project = project_q.first()
         if not project:
             raise ValueError(f"Project with ID {project_id} not found.")
 
-        papers = (
+        papers_q = (
             db.query(Paper)
             .join(ProjectPaper, ProjectPaper.paper_id == Paper.id)
             .filter(ProjectPaper.project_id == project_id)
-            .all()
         )
+        if user_id is not None:
+            papers_q = papers_q.filter(Paper.user_id == str(user_id))
+        papers = papers_q.all()
 
         refs = []
         title_tokens = {}
@@ -227,40 +236,3 @@ class SummaryService:
             generated_at=datetime.utcnow(),
         )
 
-    def list_summaries(self, db: Session):
-        from app.models.database import PaperSummary
-        records = db.query(PaperSummary).order_by(PaperSummary.generated_at.desc()).all()
-        results = []
-        for s in records:
-            paper = s.paper
-            if not paper:
-                continue
-            author_names = [a.author_name for a in paper.authors]
-            results.append(
-                PaperSummaryOut(
-                    paper_id=paper.id,
-                    title=paper.title,
-                    authors=author_names,
-                    year=paper.year,
-                    venue=paper.venue,
-                    doi=paper.doi,
-                    research_problem=s.research_problem,
-                    objective=s.objective,
-                    background=s.background,
-                    methodology=s.methodology,
-                    dataset=s.dataset,
-                    models_algorithms=s.models_algorithms,
-                    experimental_setup=s.experimental_setup,
-                    key_results=s.key_results,
-                    major_findings=s.major_findings,
-                    limitations=s.limitations,
-                    future_work=s.future_work,
-                    research_contribution=s.research_contribution,
-                    keywords=json.loads(s.keywords_json or "[]"),
-                    key_takeaways=json.loads(s.key_takeaways_json or "[]"),
-                    citation=s.citation or "",
-                    model_used=s.model_used or "deterministic",
-                    generated_at=s.generated_at or datetime.utcnow(),
-                )
-            )
-        return results

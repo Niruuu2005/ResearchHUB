@@ -67,6 +67,15 @@
       when: repo_git_dir.stat.exists
       become_user: ubuntu
 
+    - name: Copy environment configuration (.env) to deployment directory
+      copy:
+        src: "../.env"
+        dest: "{{ app_dir }}/.env"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+      failed_when: false
+
     - name: Deploy ResearchOps AI Multi-Container Stack via Docker Compose
       command: docker compose up --build -d
       args:

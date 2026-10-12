@@ -3,8 +3,9 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.db.session import get_db
-from app.models.database import ResearchSession
+from app.models.database import ResearchSession, User
 from app.models.schemas import ResearchRequest, ResearchResponse
 from app.services.research_service import ResearchService
 
@@ -13,7 +14,11 @@ research_service = ResearchService()
 
 
 @router.post("", response_model=ResearchResponse, summary="Execute Topic Research")
-async def execute_research(payload: ResearchRequest, db: Session = Depends(get_db)):
+async def execute_research(
+    payload: ResearchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Execute topic research pipeline across Wikipedia, OpenAlex, and Crossref with advanced filters."""
     topic = payload.topic.strip()
     if not topic:
@@ -30,6 +35,7 @@ async def execute_research(payload: ResearchRequest, db: Session = Depends(get_d
             open_access_only=payload.open_access_only,
             sources_filter=payload.sources,
             db=db,
+            user_id=current_user.id,
         )
         return response
     except Exception as exc:
@@ -43,10 +49,12 @@ async def execute_research(payload: ResearchRequest, db: Session = Depends(get_d
 async def get_research_history(
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Retrieve list of previous research queries."""
+    """Retrieve list of previous research queries belonging to the current user."""
     sessions = (
         db.query(ResearchSession)
+        .filter(ResearchSession.user_id == current_user.id)
         .order_by(ResearchSession.created_at.desc())
         .limit(limit)
         .all()
@@ -66,9 +74,20 @@ async def get_research_history(
 
 
 @router.get("/{session_id}", summary="Get Research Session")
-async def get_research_session(session_id: int, db: Session = Depends(get_db)):
+async def get_research_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Retrieve full details of a saved research session."""
-    session = db.query(ResearchSession).filter(ResearchSession.id == session_id).first()
+    session = (
+        db.query(ResearchSession)
+        .filter(
+            ResearchSession.id == session_id,
+            ResearchSession.user_id == current_user.id,
+        )
+        .first()
+    )
     if not session:
         raise HTTPException(status_code=404, detail="Research session not found.")
 
@@ -83,11 +102,23 @@ async def get_research_session(session_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{session_id}", summary="Delete Research Session")
-async def delete_research_session(session_id: int, db: Session = Depends(get_db)):
+async def delete_research_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Delete a research session from history."""
-    session = db.query(ResearchSession).filter(ResearchSession.id == session_id).first()
+    session = (
+        db.query(ResearchSession)
+        .filter(
+            ResearchSession.id == session_id,
+            ResearchSession.user_id == current_user.id,
+        )
+        .first()
+    )
     if not session:
         raise HTTPException(status_code=404, detail="Research session not found.")
     db.delete(session)
     db.commit()
     return {"message": "Session deleted successfully"}
+
